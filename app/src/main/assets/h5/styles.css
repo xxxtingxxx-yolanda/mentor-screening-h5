@@ -339,6 +339,11 @@ button.ghost {
   background: var(--accent);
 }
 
+.direct-btn {
+  background: var(--brand);
+  color: #f5fff9;
+}
+
 .detail-drawer {
   position: fixed;
   inset: 0;

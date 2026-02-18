@@ -1,6 +1,6 @@
 ﻿const DATA_URL = "data/mentors.json";
 const DIRECT_MENTORS = new Set(["田飞", "何铭锋"]);
-const DIRECT_THRESHOLD = 72;
+const DIRECT_PRIORITY_MIN_SCORE = 64;
 const DIRECT_CLARITY_THRESHOLD = 60;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_FILE_EXT = ["pdf", "doc", "docx"];
@@ -22,10 +22,11 @@ const state = {
   mentors: [],
   rankedMentors: [],
   visibleMentors: [],
-  directUnlocked: false,
+  preferDirectMentorsByProfile: false,
   isAnalyzing: false,
   profile: null,
-  selectedMentor: null
+  selectedMentor: null,
+  supabaseClient: null
 };
 
 const els = {
@@ -129,6 +130,7 @@ function normalizeMentor(mentor) {
   const careerTags = ensureArray(mentor.careerTags);
   return {
     ...mentor,
+    allowDirectApply: Boolean(mentor.allowDirectApply || DIRECT_MENTORS.has(mentor.name)),
     skillTags,
     careerTags,
     hiddenScore: 0,
@@ -172,6 +174,8 @@ async function onAnalyze(event) {
   state.isAnalyzing = true;
   els.analyzeBtn.disabled = true;
   els.resetBtn.disabled = true;
+  const oldBtnText = els.analyzeBtn.textContent;
+  els.analyzeBtn.textContent = "分析中...";
 
   try {
     await playAnalysisAnimation();
@@ -179,7 +183,7 @@ async function onAnalyze(event) {
     const scored = rankMentors(profile);
     state.profile = profile;
     state.rankedMentors = scored.sorted;
-    state.directUnlocked = scored.directUnlocked;
+    state.preferDirectMentorsByProfile = scored.preferDirectMentors;
 
     persistProfile(profile);
     els.formMsg.style.color = "#0a4c38";
@@ -189,6 +193,7 @@ async function onAnalyze(event) {
     state.isAnalyzing = false;
     els.analyzeBtn.disabled = false;
     els.resetBtn.disabled = false;
+    els.analyzeBtn.textContent = oldBtnText;
   }
 }
 
@@ -215,7 +220,6 @@ async function playAnalysisAnimation() {
     "AI 正在推演职业规划路径...",
     "AI 正在生成导师推荐结果..."
   ];
-
   els.formMsg.style.color = "#2c5e4c";
   for (const step of steps) {
     els.formMsg.textContent = step;
@@ -238,7 +242,7 @@ function rankMentors(profile) {
     const careerScore = calcOverlapScore(profile.careerPlan, mentor, "career");
 
     let total = directionScore * 0.5 + skillScore * 0.3 + careerScore * 0.2;
-    if (DIRECT_MENTORS.has(mentor.name) && hasDirectIntent && clarityScore >= DIRECT_CLARITY_THRESHOLD) {
+    if (isDirectMentor(mentor) && hasDirectIntent && clarityScore >= DIRECT_CLARITY_THRESHOLD) {
       total += 8;
     }
 
@@ -250,18 +254,22 @@ function rankMentors(profile) {
 
   scoredMentors.sort((a, b) => b.hiddenScore - a.hiddenScore);
 
-  const directScores = scoredMentors.filter((item) => DIRECT_MENTORS.has(item.name));
-  const directUnlocked = directScores.some(
-    (item) => item.hiddenScore >= DIRECT_THRESHOLD || (clarityScore >= DIRECT_CLARITY_THRESHOLD && item.hiddenScore >= 64)
-  );
+  const directMentorScores = scoredMentors.filter((item) => isDirectMentor(item));
+  const profileHasProductDirection = profile.targetDirection.includes("产品设计");
+  const preferDirectMentors =
+    profileHasProductDirection ||
+    (hasDirectIntent &&
+      clarityScore >= DIRECT_CLARITY_THRESHOLD &&
+      directMentorScores.some((item) => item.hiddenScore >= DIRECT_PRIORITY_MIN_SCORE));
 
-  if (!directUnlocked) {
-    return { sorted: scoredMentors, directUnlocked };
+  if (!preferDirectMentors) {
+    return { sorted: scoredMentors, preferDirectMentors: false };
   }
 
-  const topDirect = directScores.sort((a, b) => b.hiddenScore - a.hiddenScore);
-  const rest = scoredMentors.filter((item) => !DIRECT_MENTORS.has(item.name));
-  return { sorted: [...topDirect, ...rest], directUnlocked };
+  return {
+    sorted: moveDirectMentorsToFront(scoredMentors),
+    preferDirectMentors: true
+  };
 }
 
 function calcProfileClarity(profile) {
@@ -364,6 +372,10 @@ function applyFilters() {
     list = list.filter((item) => (item.searchText || "").toLowerCase().includes(keyword));
   }
 
+  if (shouldPrioritizeDirectMentors(direction)) {
+    list = moveDirectMentorsToFront(list);
+  }
+
   state.visibleMentors = list;
   renderMentorList();
 
@@ -372,6 +384,29 @@ function applyFilters() {
   } else {
     els.resultCount.textContent = `导师库 ${list.length} 位`;
   }
+}
+
+function shouldPrioritizeDirectMentors(direction) {
+  const byFilter = direction === "产品设计";
+  const byProfile = state.preferDirectMentorsByProfile;
+  return byFilter || byProfile;
+}
+
+function moveDirectMentorsToFront(list) {
+  const direct = [];
+  const others = [];
+  list.forEach((item) => {
+    if (isDirectMentor(item)) {
+      direct.push(item);
+    } else {
+      others.push(item);
+    }
+  });
+  return [...direct, ...others];
+}
+
+function isDirectMentor(mentor) {
+  return Boolean(mentor.allowDirectApply || DIRECT_MENTORS.has(mentor.name));
 }
 
 function renderMentorList() {
@@ -398,11 +433,8 @@ function renderMentorList() {
     cardNode.querySelector(".mentor-research").textContent = mentor.researchAreas || "待补充";
 
     const badge = cardNode.querySelector(".badge");
-    if (mentor.allowDirectApply && state.directUnlocked) {
-      badge.textContent = "直投开放";
-      badge.classList.remove("hidden");
-    } else if (mentor.allowDirectApply) {
-      badge.textContent = "重点导师";
+    if (isDirectMentor(mentor)) {
+      badge.textContent = "可直投";
       badge.classList.remove("hidden");
     } else {
       badge.classList.add("hidden");
@@ -411,13 +443,18 @@ function renderMentorList() {
     const detailBtn = cardNode.querySelector(".detail-btn");
     detailBtn.addEventListener("click", () => openDetail(mentor));
 
+    const actions = cardNode.querySelector(".mentor-actions");
     const contactBtn = cardNode.querySelector(".contact-btn");
-    if (mentor.allowDirectApply && state.directUnlocked) {
-      contactBtn.textContent = "简历直投";
-      contactBtn.addEventListener("click", () => openDirectApplyDialog(mentor));
-    } else {
-      contactBtn.textContent = "复制邮箱";
-      contactBtn.addEventListener("click", () => copyEmail(mentor.email));
+    contactBtn.textContent = "复制邮箱";
+    contactBtn.addEventListener("click", () => copyEmail(mentor.email));
+
+    if (isDirectMentor(mentor)) {
+      const directBtn = document.createElement("button");
+      directBtn.type = "button";
+      directBtn.className = "contact-btn direct-btn";
+      directBtn.textContent = "简历直投";
+      directBtn.addEventListener("click", () => openDirectApplyDialog(mentor));
+      actions.appendChild(directBtn);
     }
 
     els.mentorList.appendChild(cardNode);
@@ -426,8 +463,8 @@ function renderMentorList() {
 
 function openDetail(mentor) {
   state.selectedMentor = mentor;
-  const directButton = mentor.allowDirectApply && state.directUnlocked
-    ? `<button type="button" id="detailDirectBtn">简历直投</button>`
+  const actionButtons = isDirectMentor(mentor)
+    ? `<button type="button" id="detailEmailBtn">复制邮箱</button><button type="button" id="detailDirectBtn" class="direct-btn">简历直投</button>`
     : `<button type="button" id="detailEmailBtn">复制邮箱</button>`;
 
   els.detailContent.innerHTML = `
@@ -439,7 +476,7 @@ function openDetail(mentor) {
         <p class="detail-meta">籍贯：${mentor.origin || "未公开"}</p>
         <p class="detail-meta">出生年份：${mentor.birthYear || "未公开"}</p>
         <p class="detail-meta">邮箱：${mentor.email || "未公开"}</p>
-        <div class="action-row">${directButton}</div>
+        <div class="action-row">${actionButtons}</div>
       </div>
     </div>
     <div class="detail-block">
@@ -471,7 +508,7 @@ function closeDetail() {
 }
 
 function openDirectApplyDialog(mentor) {
-  if (!(mentor.allowDirectApply && state.directUnlocked)) {
+  if (!isDirectMentor(mentor)) {
     copyEmail(mentor.email);
     return;
   }
@@ -519,41 +556,58 @@ async function onSubmitDirectApply(event) {
   const payload = {
     mentorId: state.selectedMentor.id,
     mentorName: state.selectedMentor.name,
+    mentorDirection: state.selectedMentor.direction,
     studentName: name,
     studentPhone: phone,
     studentEmail: email,
     intro,
-    fileName: file.name,
+    originalFileName: file.name,
     submittedAt: new Date().toISOString()
   };
 
-  let remoteOk = false;
   try {
-    remoteOk = await submitToRemoteApi(payload, file);
-  } catch (_) {
-    remoteOk = false;
+    const result = await submitDirectApplication(payload, file);
+    els.applyMsg.style.color = "#0a4c38";
+    if (result.mode === "supabase") {
+      els.applyMsg.textContent = result.notified
+        ? "提交成功：简历已入库并发送通知。"
+        : "提交成功：简历已入库。";
+    } else if (result.mode === "api") {
+      els.applyMsg.textContent = "提交成功：简历已发送。";
+    } else {
+      els.applyMsg.textContent = "提交成功：已本地暂存，待后台接通后补发。";
+    }
+
+    setTimeout(() => {
+      els.applyDialog.close();
+    }, 900);
+  } catch (error) {
+    els.applyMsg.style.color = "#b63f3f";
+    els.applyMsg.textContent = `提交失败：${error.message}`;
+  } finally {
+    els.submitApplyBtn.disabled = false;
   }
-
-  if (!remoteOk) {
-    saveApplyDraft(payload);
-  }
-
-  els.applyMsg.style.color = "#0a4c38";
-  els.applyMsg.textContent = remoteOk
-    ? "提交成功：简历已转交导师通道。"
-    : "提交成功：已暂存投递记录，待后台接通后自动补发。";
-
-  setTimeout(() => {
-    els.applyDialog.close();
-  }, 850);
-
-  els.submitApplyBtn.disabled = false;
 }
 
-async function submitToRemoteApi(payload, file) {
-  const endpoint = window.__DIRECT_APPLY_API__ || "";
-  if (!endpoint) return false;
+async function submitDirectApplication(payload, file) {
+  const apiEndpoint = normalizeText(getCfg("__DIRECT_APPLY_API__", ""));
+  if (apiEndpoint) {
+    const ok = await uploadViaDirectApi(apiEndpoint, payload, file);
+    if (ok) {
+      return { ok: true, mode: "api", notified: false };
+    }
+  }
 
+  const supabaseResult = await uploadViaSupabase(payload, file);
+  if (supabaseResult.ok) {
+    return supabaseResult;
+  }
+
+  saveApplyDraft(payload);
+  return { ok: true, mode: "local", notified: false };
+}
+
+async function uploadViaDirectApi(endpoint, payload, file) {
   const formData = new FormData();
   Object.entries(payload).forEach(([key, value]) => formData.append(key, value));
   formData.append("resume", file);
@@ -562,14 +616,122 @@ async function submitToRemoteApi(payload, file) {
     method: "POST",
     body: formData
   });
-
   return response.ok;
+}
+
+async function uploadViaSupabase(payload, file) {
+  const client = createSupabaseClient();
+  if (!client) {
+    return { ok: false, mode: "none", notified: false };
+  }
+
+  const bucket = getCfg("__SUPABASE_BUCKET__", "resume_uploads");
+  const table = getCfg("__SUPABASE_TABLE__", "direct_applications");
+
+  const ext = (file.name.split(".").pop() || "pdf").toLowerCase();
+  const safeFileName = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+  const filePath = `${payload.mentorId}/${safeFileName}`;
+
+  const { error: uploadError } = await client.storage.from(bucket).upload(filePath, file, {
+    cacheControl: "3600",
+    upsert: false
+  });
+
+  if (uploadError) {
+    throw new Error(`文件上传失败：${uploadError.message}`);
+  }
+
+  const insertPayload = {
+    mentor_id: payload.mentorId,
+    mentor_name: payload.mentorName,
+    mentor_direction: payload.mentorDirection,
+    student_name: payload.studentName,
+    student_phone: payload.studentPhone,
+    student_email: payload.studentEmail,
+    intro: payload.intro,
+    resume_bucket: bucket,
+    resume_path: filePath,
+    resume_name: payload.originalFileName,
+    submit_source: "h5",
+    status: "submitted"
+  };
+
+  const { data, error: insertError } = await client
+    .from(table)
+    .insert(insertPayload)
+    .select("id")
+    .single();
+
+  if (insertError) {
+    throw new Error(`记录写入失败：${insertError.message}`);
+  }
+
+  const notified = await notifyOwner({
+    id: data?.id,
+    ...insertPayload,
+    submitted_at: payload.submittedAt,
+    owner_email: getCfg("__OWNER_EMAIL__", "")
+  });
+
+  return { ok: true, mode: "supabase", notified };
+}
+
+function createSupabaseClient() {
+  if (state.supabaseClient) return state.supabaseClient;
+
+  const supabaseUrl = normalizeText(getCfg("__SUPABASE_URL__", ""));
+  const supabaseAnonKey = normalizeText(getCfg("__SUPABASE_ANON_KEY__", ""));
+  const supabaseFactory =
+    typeof window !== "undefined" && window.supabase && typeof window.supabase.createClient === "function"
+      ? window.supabase.createClient
+      : null;
+
+  if (!supabaseFactory || !supabaseUrl || !supabaseAnonKey) {
+    return null;
+  }
+
+  state.supabaseClient = supabaseFactory(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false }
+  });
+  return state.supabaseClient;
+}
+
+async function notifyOwner(payload) {
+  const webhookUrl = normalizeText(getCfg("__NOTIFY_WEBHOOK_URL__", ""));
+  if (!webhookUrl) {
+    return false;
+  }
+
+  const headers = {
+    "Content-Type": "application/json"
+  };
+  const secret = normalizeText(getCfg("__NOTIFY_WEBHOOK_SECRET__", ""));
+  if (secret) {
+    headers["x-webhook-secret"] = secret;
+  }
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload)
+    });
+    return response.ok;
+  } catch (_) {
+    return false;
+  }
 }
 
 function saveApplyDraft(payload) {
   const oldQueue = JSON.parse(localStorage.getItem("directApplyQueue") || "[]");
   oldQueue.push(payload);
   localStorage.setItem("directApplyQueue", JSON.stringify(oldQueue));
+}
+
+function getCfg(name, fallbackValue = "") {
+  if (typeof window === "undefined") return fallbackValue;
+  const value = window[name];
+  return value === undefined || value === null ? fallbackValue : value;
 }
 
 async function copyEmail(email) {
@@ -605,7 +767,7 @@ function onReset() {
   els.formMsg.textContent = "";
   els.formMsg.style.color = "#b63f3f";
   state.profile = null;
-  state.directUnlocked = false;
+  state.preferDirectMentorsByProfile = false;
   state.rankedMentors = [...state.mentors];
   applyFilters();
 }

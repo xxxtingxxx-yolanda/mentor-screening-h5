@@ -27,6 +27,7 @@ const state = {
 };
 
 const toastState = {
+  layer: null,
   element: null,
   timerId: null
 };
@@ -524,21 +525,30 @@ function showTempMessage(text, success) {
 }
 
 function ensureToastElement() {
-  if (toastState.element) return toastState.element;
+  if (toastState.element && toastState.layer) return toastState.element;
+
+  const layer = document.createElement("div");
+  layer.className = "app-toast-layer";
 
   const toast = document.createElement("div");
   toast.className = "app-toast";
   toast.setAttribute("role", "status");
   toast.setAttribute("aria-live", "polite");
-  document.body.appendChild(toast);
+
+  layer.appendChild(toast);
+  document.body.appendChild(layer);
+
+  toastState.layer = layer;
   toastState.element = toast;
   return toast;
 }
 
 function showToast(text, success) {
   const toast = ensureToastElement();
+  const layer = toastState.layer;
   toast.textContent = text;
   toast.classList.toggle("error", !success);
+  layer.classList.add("show");
   toast.classList.add("show");
 
   if (toastState.timerId) {
@@ -546,8 +556,9 @@ function showToast(text, success) {
   }
 
   toastState.timerId = setTimeout(() => {
+    layer.classList.remove("show");
     toast.classList.remove("show");
-  }, 1800);
+  }, 1200);
 }
 
 function onReset() {

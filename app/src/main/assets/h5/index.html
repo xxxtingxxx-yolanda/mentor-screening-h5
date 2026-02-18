@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="导师筛选 H5：学生画像填写、后台隐形评分、导师推荐与直投。">
-  <title>导师筛选 H5</title>
+  <meta name="description" content="湖工大包装设计导师筛选 H5：考研/调剂同学的公益匹配工具。">
+  <title>湖工大包装设计导师筛选 H5</title>
+  <link rel="icon" href="photos/mentor-placeholder.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,15 +13,42 @@
     <div class="site-brand">
       <span class="logo-dot"></span>
       <div>
-        <h1>导师筛选 H5</h1>
-        <p>移动端优先 · 隐形评分 · 精准分流</p>
+        <h1>湖工大包装设计导师筛选</h1>
+        <p>给考研/调剂同学的公益匹配工具</p>
       </div>
     </div>
-    <p class="header-note">评分仅用于推荐分流，结果以学院官方信息为准。</p>
+    <p class="header-note">信息来源：<a href="https://art.hut.edu.cn/ljyjx.htm" target="_blank" rel="noopener">学院官网导师介绍 &gt;</a></p>
   </header>
 
-  <main class="app-shell">
-    <section class="panel form-panel" aria-label="学生画像填写">
+  <section class="launch-screen" id="launchScreen" aria-label="启动页">
+    <div class="launch-card">
+      <p class="launch-badge">公益项目</p>
+      <h2>湖工大包装设计导师筛选</h2>
+      <p class="launch-sub">3 步完成导师筛选，先看方向再联系。</p>
+      <div class="launch-grid">
+        <article class="launch-item">
+          <h3>项目说明</h3>
+          <p>先点选目标方向、已掌握技能和职业规划，再由系统后台做隐形匹配评分，给出更契合的导师优先顺序。</p>
+        </article>
+        <article class="launch-item">
+          <h3>过来人建议</h3>
+          <p>这是给师弟师妹的实用工具，帮助大家缩短选导摸索时间，少走弯路。</p>
+        </article>
+      </div>
+      <div class="launch-meta">
+        <p><strong>适用学校：</strong>湖南工业大学包装设计艺术学院</p>
+        <p><strong>适用人群：</strong>考研、调剂、拟联系导师同学</p>
+        <p><strong>使用说明：</strong>匹配结果仅供参考，请以学院官方发布信息为准。</p>
+      </div>
+      <div class="cover-actions">
+        <button type="button" class="cover-btn" id="startAppBtn">立即开始</button>
+        <button type="button" class="ghost-btn" id="copyShareTopBtn">复制转发文案</button>
+      </div>
+    </div>
+  </section>
+
+  <main class="app-shell flow-mode app-hidden" id="appMain">
+    <section class="panel form-panel" id="formPage" aria-label="学生画像填写">
       <h2>1. 学生画像</h2>
       <p class="muted">尽量点选，不用长篇填写。系统会按你的选择在后台完成匹配评分。</p>
 
@@ -36,7 +64,7 @@
           <button type="button" class="chip" data-value="乡村振兴与生态设计">乡村振兴与生态设计</button>
         </div>
         <input id="targetDirection" name="targetDirection" type="hidden" required>
-        <input id="targetDirectionExtra" name="targetDirectionExtra" type="text" maxlength="80" placeholder="方向补充（可选）">
+        <input id="targetDirectionExtra" name="targetDirectionExtra" type="text" placeholder="方向补充（可选）">
 
         <label>已掌握技能（必选，可多选）</label>
         <div class="chip-row selectable" id="currentSkillsChips">
@@ -54,7 +82,7 @@
           <button type="button" class="chip" data-value="AI创作工具">AI创作工具</button>
         </div>
         <input id="currentSkills" name="currentSkills" type="hidden" required>
-        <input id="currentSkillsExtra" name="currentSkillsExtra" type="text" maxlength="100" placeholder="技能补充（可选）">
+        <input id="currentSkillsExtra" name="currentSkillsExtra" type="text" placeholder="技能补充（可选）">
 
         <label>未来职业规划（必选，可多选）</label>
         <div class="chip-row selectable" id="careerPlanChips">
@@ -69,7 +97,7 @@
           <button type="button" class="chip" data-value="跨学科创新">跨学科创新</button>
         </div>
         <input id="careerPlan" name="careerPlan" type="hidden" required>
-        <input id="careerPlanExtra" name="careerPlanExtra" type="text" maxlength="100" placeholder="职业规划补充（可选）">
+        <input id="careerPlanExtra" name="careerPlanExtra" type="text" placeholder="职业规划补充（可选）">
 
         <label class="checkbox-wrap">
           <input id="privacyConsent" type="checkbox" required>
@@ -84,12 +112,16 @@
       </form>
     </section>
 
-    <section class="panel result-panel" aria-label="推荐结果">
+    <section class="panel result-panel" id="resultPage" aria-label="推荐结果" hidden>
+      <div class="result-top-actions">
+        <button type="button" class="ghost" id="backToFormBtn">返回修改画像</button>
+      </div>
       <div class="result-head">
         <h2>2. 推荐结果</h2>
         <div class="result-count" id="resultCount">尚未生成</div>
       </div>
       <p class="muted">系统将综合你的方向、技能和职业规划进行智能匹配分析。</p>
+      <p class="result-ai-note" id="resultAiNote">先完成学生画像，AI 会生成优先顺序和匹配解读。</p>
 
       <div class="toolbar">
         <label for="directionFilter">方向筛选</label>
@@ -101,6 +133,15 @@
       </div>
 
       <div id="mentorList" class="mentor-list" aria-live="polite"></div>
+
+      <section class="share-panel" aria-label="转发建议">
+        <h3>把它转发给同方向同学</h3>
+        <p class="muted">你可能只花了 1 分钟，但能帮同学少走很多弯路。</p>
+        <div class="share-actions">
+          <button type="button" id="copyShareBtn">复制分享文案</button>
+          <a class="share-link" href="https://art.hut.edu.cn/ljyjx.htm" target="_blank" rel="noopener">信息来源：学院官网导师介绍 &gt;</a>
+        </div>
+      </section>
     </section>
   </main>
 
@@ -115,6 +156,10 @@
       <div class="mentor-main">
         <div class="mentor-title-row">
           <h3 class="mentor-name"></h3>
+          <div class="mentor-badges">
+            <span class="rank-chip"></span>
+            <span class="score-chip"></span>
+          </div>
         </div>
         <p class="mentor-meta"></p>
         <p class="mentor-research"></p>
@@ -126,7 +171,18 @@
     </article>
   </template>
 
-  <script src="data/mentors.inline.js"></script>
+  <section class="analysis-overlay" id="analysisOverlay" aria-label="分析进度" hidden>
+    <div class="analysis-card">
+      <p class="analysis-badge">AI 正在为你分析</p>
+      <p class="analysis-step" id="analysisStepText">准备中...</p>
+      <div class="analysis-progress" aria-hidden="true">
+        <span id="analysisProgressBar"></span>
+      </div>
+      <p class="analysis-hint">正在匹配导师方向与研究关键词，请稍候。</p>
+    </div>
+  </section>
+
+  <script src="data/mentors.inline.js?v=20260218c" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>

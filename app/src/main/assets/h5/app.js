@@ -1,5 +1,8 @@
 ﻿const DATA_URL = "data/mentors.json";
+const DATA_VERSION = "20260218c";
+const INLINE_DATA_URL = `data/mentors.inline.js?v=${DATA_VERSION}`;
 const PRIORITY_MENTORS = new Set(["田飞", "何铭锋"]);
+const SOURCE_URL = "https://art.hut.edu.cn/ljyjx.htm";
 const PRIORITY_MIN_SCORE = 64;
 const PRIORITY_CLARITY_THRESHOLD = 42;
 const DEFAULT_PHOTO_PATH = "photos/mentor-placeholder.svg";
@@ -33,6 +36,12 @@ const toastState = {
 };
 
 const els = {
+  launchScreen: document.getElementById("launchScreen"),
+  startAppBtn: document.getElementById("startAppBtn"),
+  appMain: document.getElementById("appMain"),
+  formPage: document.getElementById("formPage"),
+  resultPage: document.getElementById("resultPage"),
+  backToFormBtn: document.getElementById("backToFormBtn"),
   profileForm: document.getElementById("profileForm"),
   targetDirection: document.getElementById("targetDirection"),
   targetDirectionChips: document.getElementById("targetDirectionChips"),
@@ -47,14 +56,20 @@ const els = {
   analyzeBtn: document.getElementById("analyzeBtn"),
   resetBtn: document.getElementById("resetBtn"),
   formMsg: document.getElementById("formMsg"),
+  copyShareBtn: document.getElementById("copyShareBtn"),
+  copyShareTopBtn: document.getElementById("copyShareTopBtn"),
   directionFilter: document.getElementById("directionFilter"),
   keywordFilter: document.getElementById("keywordFilter"),
   mentorList: document.getElementById("mentorList"),
   resultCount: document.getElementById("resultCount"),
+  resultAiNote: document.getElementById("resultAiNote"),
   detailDrawer: document.getElementById("detailDrawer"),
   detailContent: document.getElementById("detailContent"),
   closeDetailBtn: document.getElementById("closeDetailBtn"),
-  mentorCardTemplate: document.getElementById("mentorCardTemplate")
+  mentorCardTemplate: document.getElementById("mentorCardTemplate"),
+  analysisOverlay: document.getElementById("analysisOverlay"),
+  analysisStepText: document.getElementById("analysisStepText"),
+  analysisProgressBar: document.getElementById("analysisProgressBar")
 };
 
 document.addEventListener("DOMContentLoaded", init);
@@ -65,18 +80,78 @@ async function init() {
   await loadMentors();
   hydrateProfileFromStorage();
   applyFilters();
+  showLaunchView();
 }
 
 function bindEvents() {
+  if (els.startAppBtn) {
+    els.startAppBtn.addEventListener("click", enterApp);
+  }
+  if (els.backToFormBtn) {
+    els.backToFormBtn.addEventListener("click", showFormPage);
+  }
   els.profileForm.addEventListener("submit", onAnalyze);
   els.resetBtn.addEventListener("click", onReset);
-  els.directionFilter.addEventListener("change", applyFilters);
-  els.keywordFilter.addEventListener("input", applyFilters);
+  if (els.copyShareBtn) {
+    els.copyShareBtn.addEventListener("click", onCopyShare);
+  }
+  if (els.copyShareTopBtn) {
+    els.copyShareTopBtn.addEventListener("click", onCopyShare);
+  }
+  if (els.directionFilter) {
+    els.directionFilter.addEventListener("change", applyFilters);
+  }
+  if (els.keywordFilter) {
+    els.keywordFilter.addEventListener("input", applyFilters);
+  }
 
-  els.closeDetailBtn.addEventListener("click", closeDetail);
-  els.detailDrawer.addEventListener("click", (event) => {
-    if (event.target === els.detailDrawer) closeDetail();
-  });
+  if (els.closeDetailBtn) {
+    els.closeDetailBtn.addEventListener("click", closeDetail);
+  }
+  if (els.detailDrawer) {
+    els.detailDrawer.addEventListener("click", (event) => {
+      if (event.target === els.detailDrawer) closeDetail();
+    });
+  }
+}
+
+function showLaunchView() {
+  if (els.launchScreen) {
+    els.launchScreen.hidden = false;
+  }
+  if (els.appMain) {
+    els.appMain.classList.add("app-hidden");
+  }
+}
+
+function enterApp() {
+  if (els.launchScreen) {
+    els.launchScreen.hidden = true;
+  }
+  if (els.appMain) {
+    els.appMain.classList.remove("app-hidden");
+  }
+  showFormPage();
+}
+
+function showFormPage() {
+  if (els.formPage) {
+    els.formPage.hidden = false;
+  }
+  if (els.resultPage) {
+    els.resultPage.hidden = true;
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function showResultPage() {
+  if (els.formPage) {
+    els.formPage.hidden = true;
+  }
+  if (els.resultPage) {
+    els.resultPage.hidden = false;
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function bindChipGroups() {
@@ -116,19 +191,9 @@ function syncChipGroup(container, hiddenInput, extraInput) {
 
 async function loadMentors() {
   try {
-    let payload = null;
-    if (
-      typeof window !== "undefined" &&
-      window.__MENTORS_PAYLOAD__ &&
-      Array.isArray(window.__MENTORS_PAYLOAD__.mentors)
-    ) {
-      payload = window.__MENTORS_PAYLOAD__;
-    }
-
-    if (!payload) {
-      const res = await fetch(DATA_URL, { cache: "no-store" });
-      if (!res.ok) throw new Error(`加载数据失败: ${res.status}`);
-      payload = await res.json();
+    const payload = await loadMentorPayload();
+    if (!payload || !Array.isArray(payload.mentors) || payload.mentors.length === 0) {
+      throw new Error("导师数据为空");
     }
 
     state.mentors = payload.mentors.map((mentor) => normalizeMentor(mentor));
@@ -139,6 +204,49 @@ async function loadMentors() {
     els.formMsg.style.color = "#b63f3f";
     els.formMsg.textContent = `数据加载失败：${error.message}`;
   }
+}
+
+async function loadMentorPayload() {
+  if (window.__MENTORS_PAYLOAD__ && Array.isArray(window.__MENTORS_PAYLOAD__.mentors) && window.__MENTORS_PAYLOAD__.mentors.length > 0) {
+    return window.__MENTORS_PAYLOAD__;
+  }
+
+  const inlinePayload = await loadInlineMentorPayload();
+  if (inlinePayload && Array.isArray(inlinePayload.mentors) && inlinePayload.mentors.length > 0) {
+    return inlinePayload;
+  }
+
+  try {
+    const res = await fetch(DATA_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error(`加载数据失败: ${res.status}`);
+    return await res.json();
+  } catch (fetchError) {
+    throw fetchError;
+  }
+}
+
+async function loadInlineMentorPayload() {
+  if (window.__MENTORS_PAYLOAD__) {
+    return window.__MENTORS_PAYLOAD__;
+  }
+
+  try {
+    await loadScript(INLINE_DATA_URL);
+    return window.__MENTORS_PAYLOAD__ || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`脚本加载失败: ${src}`));
+    document.head.appendChild(script);
+  });
 }
 
 function normalizeMentor(mentor) {
@@ -165,6 +273,8 @@ function ensureArray(value) {
 }
 
 function fillDirectionFilter() {
+  if (!els.directionFilter) return;
+  els.directionFilter.innerHTML = '<option value="">全部方向</option>';
   const directions = [...new Set(state.mentors.map((item) => item.direction))].sort();
   directions.forEach((direction) => {
     const option = document.createElement("option");
@@ -200,16 +310,29 @@ async function onAnalyze(event) {
   try {
     await playAnalysisAnimation();
 
+    if (!state.mentors.length) {
+      throw new Error("导师库未加载成功，请刷新页面后重试。");
+    }
+
     const scored = rankMentors(profile);
+    if (!scored.sorted.length) {
+      throw new Error("当前未拿到导师数据，请刷新后重试。");
+    }
+
     state.profile = profile;
     state.rankedMentors = scored.sorted;
     state.preferPriorityMentorsByProfile = scored.preferPriorityMentors;
 
     persistProfile(profile);
     els.formMsg.style.color = "#0a4c38";
-    els.formMsg.textContent = "AI 分析完成，推荐结果已更新。";
+    els.formMsg.textContent = "AI 分析完成，已更新导师优先顺序。";
     applyFilters();
+    showResultPage();
+  } catch (error) {
+    els.formMsg.style.color = "#b63f3f";
+    els.formMsg.textContent = error.message || "生成推荐失败，请重试。";
   } finally {
+    hideAnalysisOverlay();
     state.isAnalyzing = false;
     els.analyzeBtn.disabled = false;
     els.resetBtn.disabled = false;
@@ -227,17 +350,22 @@ function validateProfile(profile, consent) {
 
 async function playAnalysisAnimation() {
   const steps = [
-    "AI 正在解析你的目标方向...",
-    "AI 正在评估技能匹配度...",
-    "AI 正在推演职业规划路径...",
-    "AI 正在生成导师推荐结果..."
+    "正在读取你的方向标签...",
+    "正在比对技能与研究关键词...",
+    "正在推演职业路径匹配度...",
+    "正在生成导师推荐排序..."
   ];
 
+  showAnalysisOverlay();
   els.formMsg.style.color = "#2c5e4c";
-  for (const step of steps) {
+  for (let index = 0; index < steps.length; index += 1) {
+    const step = steps[index];
+    const progress = Math.round(((index + 1) / steps.length) * 100);
+    setAnalysisStep(step, progress);
     els.formMsg.textContent = step;
-    await delay(280);
+    await delay(380);
   }
+  await delay(180);
 }
 
 function delay(ms) {
@@ -380,12 +508,34 @@ function applyFilters() {
 
   state.visibleMentors = list;
   renderMentorList();
+  updateResultAiNote();
 
   if (state.profile) {
     els.resultCount.textContent = `推荐 ${list.length} 位（共 ${state.rankedMentors.length}）`;
   } else {
     els.resultCount.textContent = `导师库 ${list.length} 位`;
   }
+}
+
+function updateResultAiNote() {
+  if (!els.resultAiNote) return;
+
+  if (!state.profile) {
+    els.resultAiNote.textContent = "先完成学生画像，AI 会生成优先顺序和匹配解读。";
+    return;
+  }
+
+  if (!state.visibleMentors.length) {
+    els.resultAiNote.textContent = "AI 已完成分析：当前筛选下暂无结果，建议放宽方向或关键词。";
+    return;
+  }
+
+  const top = state.visibleMentors[0];
+  const second = state.visibleMentors[1];
+  const names = [top?.name, second?.name].filter(Boolean).join("、");
+  const direction = state.profile.targetDirection.split("、")[0] || "你的目标方向";
+  const score = Math.round(top?.hiddenScore || 0);
+  els.resultAiNote.textContent = `AI 结论：你在「${direction}」方向匹配较清晰，当前优先建议联系 ${names}（Top1 匹配度 ${score}%）。`;
 }
 
 function shouldPrioritizeMentors(direction) {
@@ -424,6 +574,8 @@ function renderMentorList() {
     return;
   }
 
+  const rankMap = new Map(state.rankedMentors.map((mentor, index) => [mentorKey(mentor), index + 1]));
+
   state.visibleMentors.forEach((mentor, index) => {
     const cardNode = els.mentorCardTemplate.content.firstElementChild.cloneNode(true);
     cardNode.style.animationDelay = `${Math.min(index * 0.025, 0.2)}s`;
@@ -439,6 +591,19 @@ function renderMentorList() {
     cardNode.querySelector(".mentor-meta").textContent = `${mentor.direction} · ${mentor.title}`;
     cardNode.querySelector(".mentor-research").textContent = mentor.researchAreas || "待补充";
 
+    const rank = rankMap.get(mentorKey(mentor)) || index + 1;
+    const rankChip = cardNode.querySelector(".rank-chip");
+    const scoreChip = cardNode.querySelector(".score-chip");
+    rankChip.textContent = `Top ${rank}`;
+
+    const roundedScore = Math.round(mentor.hiddenScore || 0);
+    if (state.profile) {
+      scoreChip.textContent = `匹配 ${roundedScore}%`;
+      scoreChip.classList.add(resolveScoreClass(roundedScore));
+    } else {
+      scoreChip.textContent = "待匹配";
+    }
+
     const detailBtn = cardNode.querySelector(".detail-btn");
     detailBtn.addEventListener("click", () => openDetail(mentor));
 
@@ -448,6 +613,16 @@ function renderMentorList() {
 
     els.mentorList.appendChild(cardNode);
   });
+}
+
+function mentorKey(mentor) {
+  return `${mentor.name || ""}|${mentor.direction || ""}|${mentor.title || ""}`;
+}
+
+function resolveScoreClass(score) {
+  if (score >= 78) return "high";
+  if (score >= 58) return "medium";
+  return "low";
 }
 
 function openDetail(mentor) {
@@ -505,16 +680,52 @@ async function copyEmail(email) {
   }
 
   try {
-    await navigator.clipboard.writeText(value);
+    await copyText(value);
     showTempMessage(`邮箱已复制：${value}`, true);
+  } catch (_) {
+    showTempMessage("复制失败，请手动长按邮箱复制。", false);
+  }
+}
+
+async function onCopyShare() {
+  const message = buildShareMessage();
+  try {
+    await copyText(message);
+    showTempMessage("分享文案已复制，去微信粘贴即可转发。", true);
+  } catch (_) {
+    showTempMessage("复制失败，请稍后再试。", false);
+  }
+}
+
+function buildShareMessage() {
+  const target = state.profile?.targetDirection || "包装设计相关方向";
+  const topMentorNames = state.visibleMentors.slice(0, 3).map((item) => item.name).join("、");
+  const topLine = topMentorNames ? `当前优先推荐：${topMentorNames}。` : "";
+
+  return [
+    "我刚用了「湖工大包装设计导师筛选」这个公益工具。",
+    `我填写的目标方向：${target}。`,
+    topLine,
+    "适用对象：湖南工业大学包装设计艺术学院考研/调剂同学。",
+    `信息来源：学院官网导师介绍 ${SOURCE_URL}`,
+    `工具入口：${window.location.href}`
+  ].filter(Boolean).join("\n");
+}
+
+async function copyText(value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    return;
   } catch (_) {
     const textarea = document.createElement("textarea");
     textarea.value = value;
     document.body.appendChild(textarea);
     textarea.select();
-    document.execCommand("copy");
+    const copied = document.execCommand("copy");
     document.body.removeChild(textarea);
-    showTempMessage(`邮箱已复制：${value}`, true);
+    if (!copied) {
+      throw new Error("copy failed");
+    }
   }
 }
 
@@ -559,6 +770,28 @@ function showToast(text, success) {
     layer.classList.remove("show");
     toast.classList.remove("show");
   }, 1200);
+}
+
+function showAnalysisOverlay() {
+  if (!els.analysisOverlay) return;
+  els.analysisOverlay.hidden = false;
+  setAnalysisStep("准备分析...", 8);
+}
+
+function setAnalysisStep(text, progress) {
+  if (els.analysisStepText) {
+    els.analysisStepText.textContent = text;
+  }
+  if (els.analysisProgressBar) {
+    const safeProgress = Math.max(0, Math.min(100, progress));
+    els.analysisProgressBar.style.width = `${safeProgress}%`;
+  }
+}
+
+function hideAnalysisOverlay() {
+  if (!els.analysisOverlay) return;
+  els.analysisOverlay.hidden = true;
+  setAnalysisStep("准备中...", 0);
 }
 
 function onReset() {

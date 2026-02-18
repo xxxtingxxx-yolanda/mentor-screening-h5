@@ -446,7 +446,7 @@ function renderMentorList() {
 
 function openDetail(mentor) {
   const profileLink = mentor.profileUrl
-    ? `<p class="detail-meta">官网主页：<a href="${mentor.profileUrl}" target="_blank" rel="noopener">查看导师介绍</a></p>`
+    ? `<p class="detail-meta">信息来源：<a href="${mentor.profileUrl}" target="_blank" rel="noopener">学院官网导师介绍 &gt;</a></p>`
     : "";
 
   els.detailContent.innerHTML = `

@@ -1,13 +1,12 @@
 ﻿const DATA_URL = "data/mentors.json";
-const DIRECT_MENTORS = new Set(["田飞", "何铭锋"]);
-const DIRECT_PRIORITY_MIN_SCORE = 64;
-const DIRECT_CLARITY_THRESHOLD = 60;
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_FILE_EXT = ["pdf", "doc", "docx"];
+const PRIORITY_MENTORS = new Set(["田飞", "何铭锋"]);
+const PRIORITY_MIN_SCORE = 64;
+const PRIORITY_CLARITY_THRESHOLD = 42;
+const DEFAULT_PHOTO_PATH = "photos/mentor-placeholder.svg";
 
 const DIRECTION_KEYWORDS = {
-  "包装设计": ["包装", "品牌", "视觉", "文创", "材料", "结构", "绿色", "安全"],
-  "传达与媒体设计": ["传达", "媒体", "动画", "数字", "影像", "交互", "沉浸", "新媒体"],
+  "包装设计": ["包装", "品牌", "文创", "材料", "结构", "智能包装", "包装设计"],
+  "传达与媒体设计": ["传达", "媒体", "动画", "数字", "影像", "交互", "新媒体"],
   "产品设计": ["产品", "服务设计", "工业设计", "硬件", "机器人", "家电", "创新", "用户体验"],
   "环境设计": ["环境", "空间", "景观", "城乡", "建筑", "室内", "文旅", "低碳"]
 };
@@ -22,18 +21,22 @@ const state = {
   mentors: [],
   rankedMentors: [],
   visibleMentors: [],
-  preferDirectMentorsByProfile: false,
+  preferPriorityMentorsByProfile: false,
   isAnalyzing: false,
-  profile: null,
-  selectedMentor: null,
-  supabaseClient: null
+  profile: null
 };
 
 const els = {
   profileForm: document.getElementById("profileForm"),
   targetDirection: document.getElementById("targetDirection"),
+  targetDirectionChips: document.getElementById("targetDirectionChips"),
+  targetDirectionExtra: document.getElementById("targetDirectionExtra"),
   currentSkills: document.getElementById("currentSkills"),
+  currentSkillsChips: document.getElementById("currentSkillsChips"),
+  currentSkillsExtra: document.getElementById("currentSkillsExtra"),
   careerPlan: document.getElementById("careerPlan"),
+  careerPlanChips: document.getElementById("careerPlanChips"),
+  careerPlanExtra: document.getElementById("careerPlanExtra"),
   privacyConsent: document.getElementById("privacyConsent"),
   analyzeBtn: document.getElementById("analyzeBtn"),
   resetBtn: document.getElementById("resetBtn"),
@@ -45,25 +48,14 @@ const els = {
   detailDrawer: document.getElementById("detailDrawer"),
   detailContent: document.getElementById("detailContent"),
   closeDetailBtn: document.getElementById("closeDetailBtn"),
-  directionChips: document.getElementById("directionChips"),
-  mentorCardTemplate: document.getElementById("mentorCardTemplate"),
-  applyDialog: document.getElementById("applyDialog"),
-  applyForm: document.getElementById("applyForm"),
-  applyMentorName: document.getElementById("applyMentorName"),
-  studentName: document.getElementById("studentName"),
-  studentPhone: document.getElementById("studentPhone"),
-  studentEmail: document.getElementById("studentEmail"),
-  studentIntro: document.getElementById("studentIntro"),
-  resumeFile: document.getElementById("resumeFile"),
-  applyMsg: document.getElementById("applyMsg"),
-  submitApplyBtn: document.getElementById("submitApplyBtn"),
-  cancelApplyBtn: document.getElementById("cancelApplyBtn")
+  mentorCardTemplate: document.getElementById("mentorCardTemplate")
 };
 
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
   bindEvents();
+  bindChipGroups();
   await loadMentors();
   hydrateProfileFromStorage();
   applyFilters();
@@ -77,23 +69,43 @@ function bindEvents() {
 
   els.closeDetailBtn.addEventListener("click", closeDetail);
   els.detailDrawer.addEventListener("click", (event) => {
-    if (event.target === els.detailDrawer) {
-      closeDetail();
-    }
+    if (event.target === els.detailDrawer) closeDetail();
   });
+}
 
-  els.directionChips.addEventListener("click", (event) => {
+function bindChipGroups() {
+  bindChipGroup(els.targetDirectionChips, els.targetDirection, els.targetDirectionExtra);
+  bindChipGroup(els.currentSkillsChips, els.currentSkills, els.currentSkillsExtra);
+  bindChipGroup(els.careerPlanChips, els.careerPlan, els.careerPlanExtra);
+}
+
+function bindChipGroup(container, hiddenInput, extraInput) {
+  if (!container || !hiddenInput || !extraInput) return;
+
+  container.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-value]");
     if (!button) return;
-    const text = button.dataset.value;
-    if (!els.targetDirection.value.includes(text)) {
-      const append = els.targetDirection.value.trim().length > 0 ? "，" : "";
-      els.targetDirection.value = `${els.targetDirection.value.trim()}${append}${text}`;
-    }
+    button.classList.toggle("active");
+    syncChipGroup(container, hiddenInput, extraInput);
   });
 
-  els.cancelApplyBtn.addEventListener("click", () => els.applyDialog.close());
-  els.applyForm.addEventListener("submit", onSubmitDirectApply);
+  extraInput.addEventListener("input", () => {
+    syncChipGroup(container, hiddenInput, extraInput);
+  });
+
+  syncChipGroup(container, hiddenInput, extraInput);
+}
+
+function syncChipGroup(container, hiddenInput, extraInput) {
+  const selected = [...container.querySelectorAll(".chip.active")].map((node) => normalizeText(node.dataset.value));
+  const extra = normalizeText(extraInput.value);
+
+  let merged = selected.join("、");
+  if (extra) {
+    merged = merged ? `${merged}、${extra}` : extra;
+  }
+
+  hiddenInput.value = merged;
 }
 
 async function loadMentors() {
@@ -109,9 +121,7 @@ async function loadMentors() {
 
     if (!payload) {
       const res = await fetch(DATA_URL, { cache: "no-store" });
-      if (!res.ok) {
-        throw new Error(`加载数据失败: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`加载数据失败: ${res.status}`);
       payload = await res.json();
     }
 
@@ -128,13 +138,17 @@ async function loadMentors() {
 function normalizeMentor(mentor) {
   const skillTags = ensureArray(mentor.skillTags);
   const careerTags = ensureArray(mentor.careerTags);
+  const photoPath = normalizeText(mentor.photoPath || "") || DEFAULT_PHOTO_PATH;
+  const searchSeed = `${mentor.searchText || ""} ${skillTags.join(" ")} ${careerTags.join(" ")}`.trim();
+
   return {
     ...mentor,
-    allowDirectApply: Boolean(mentor.allowDirectApply || DIRECT_MENTORS.has(mentor.name)),
+    photoPath,
     skillTags,
     careerTags,
     hiddenScore: 0,
-    searchText: `${mentor.searchText || ""} ${skillTags.join(" ")} ${careerTags.join(" ")}`.trim()
+    searchText: searchSeed,
+    isPriority: PRIORITY_MENTORS.has(mentor.name)
   };
 }
 
@@ -183,7 +197,7 @@ async function onAnalyze(event) {
     const scored = rankMentors(profile);
     state.profile = profile;
     state.rankedMentors = scored.sorted;
-    state.preferDirectMentorsByProfile = scored.preferDirectMentors;
+    state.preferPriorityMentorsByProfile = scored.preferPriorityMentors;
 
     persistProfile(profile);
     els.formMsg.style.color = "#0a4c38";
@@ -198,18 +212,10 @@ async function onAnalyze(event) {
 }
 
 function validateProfile(profile, consent) {
-  if (!profile.targetDirection) {
-    return "请填写目标方向。";
-  }
-  if (!profile.currentSkills) {
-    return "请填写已掌握技能。";
-  }
-  if (!profile.careerPlan) {
-    return "请填写未来职业规划。";
-  }
-  if (!consent) {
-    return "请先勾选隐私授权。";
-  }
+  if (!profile.targetDirection) return "请至少选择 1 个目标方向。";
+  if (!profile.currentSkills) return "请至少选择 1 项已掌握技能。";
+  if (!profile.careerPlan) return "请至少选择 1 项未来职业规划。";
+  if (!consent) return "请先勾选隐私授权。";
   return "";
 }
 
@@ -220,10 +226,11 @@ async function playAnalysisAnimation() {
     "AI 正在推演职业规划路径...",
     "AI 正在生成导师推荐结果..."
   ];
+
   els.formMsg.style.color = "#2c5e4c";
   for (const step of steps) {
     els.formMsg.textContent = step;
-    await delay(360);
+    await delay(280);
   }
 }
 
@@ -234,7 +241,7 @@ function delay(ms) {
 function rankMentors(profile) {
   const clarityScore = calcProfileClarity(profile);
   const profileJoined = `${profile.targetDirection} ${profile.currentSkills} ${profile.careerPlan}`;
-  const hasDirectIntent = /(服务|产品|动画|媒介|机器人|交互|创新|品牌|传播|体验|智能)/.test(profileJoined);
+  const hasPriorityIntent = /(产品|服务|交互|创新|品牌|传播|体验|智能|数字)/.test(profileJoined);
 
   const scoredMentors = state.mentors.map((mentor) => {
     const directionScore = calcDirectionScore(profile.targetDirection, mentor);
@@ -242,7 +249,7 @@ function rankMentors(profile) {
     const careerScore = calcOverlapScore(profile.careerPlan, mentor, "career");
 
     let total = directionScore * 0.5 + skillScore * 0.3 + careerScore * 0.2;
-    if (isDirectMentor(mentor) && hasDirectIntent && clarityScore >= DIRECT_CLARITY_THRESHOLD) {
+    if (isPriorityMentor(mentor) && hasPriorityIntent && clarityScore >= PRIORITY_CLARITY_THRESHOLD) {
       total += 8;
     }
 
@@ -254,41 +261,32 @@ function rankMentors(profile) {
 
   scoredMentors.sort((a, b) => b.hiddenScore - a.hiddenScore);
 
-  const directMentorScores = scoredMentors.filter((item) => isDirectMentor(item));
+  const priorityMentorScores = scoredMentors.filter((item) => isPriorityMentor(item));
   const profileHasProductDirection = profile.targetDirection.includes("产品设计");
-  const preferDirectMentors =
+  const preferPriorityMentors =
     profileHasProductDirection ||
-    (hasDirectIntent &&
-      clarityScore >= DIRECT_CLARITY_THRESHOLD &&
-      directMentorScores.some((item) => item.hiddenScore >= DIRECT_PRIORITY_MIN_SCORE));
+    (hasPriorityIntent &&
+      clarityScore >= PRIORITY_CLARITY_THRESHOLD &&
+      priorityMentorScores.some((item) => item.hiddenScore >= PRIORITY_MIN_SCORE));
 
-  if (!preferDirectMentors) {
-    return { sorted: scoredMentors, preferDirectMentors: false };
+  if (!preferPriorityMentors) {
+    return { sorted: scoredMentors, preferPriorityMentors: false };
   }
 
   return {
-    sorted: moveDirectMentorsToFront(scoredMentors),
-    preferDirectMentors: true
+    sorted: movePriorityMentorsToFront(scoredMentors),
+    preferPriorityMentors: true
   };
 }
 
 function calcProfileClarity(profile) {
   const rawText = `${profile.targetDirection} ${profile.currentSkills} ${profile.careerPlan}`;
   const tokenCount = extractTokens(rawText).length;
+  const selectedCount = rawText.split(/[、,，;；/\s\n\r]+/).map((item) => item.trim()).filter(Boolean).length;
 
-  const sentenceHintCount = [profile.targetDirection, profile.currentSkills, profile.careerPlan]
-    .map((item) => item.replace(/\s+/g, "").length)
-    .filter((len) => len >= 8).length;
-
-  const structureHints = [
-    "例如", "负责", "项目", "目标", "计划", "希望", "擅长", "已经", "未来", "方向", "技能", "作品"
-  ];
-  const structureScore = structureHints.filter((word) => rawText.includes(word)).length;
-
-  const tokenScore = Math.min(50, tokenCount * 2);
-  const sentenceScore = sentenceHintCount * 12;
-  const guideScore = Math.min(14, structureScore * 2);
-  return Math.max(0, Math.min(100, tokenScore + sentenceScore + guideScore));
+  const tokenScore = Math.min(68, tokenCount * 4);
+  const selectedScore = Math.min(32, selectedCount * 5);
+  return Math.max(0, Math.min(100, tokenScore + selectedScore));
 }
 
 function calcDirectionScore(inputText, mentor) {
@@ -343,9 +341,7 @@ function extractTokens(text) {
 function countOverlap(profileTokens, mentorTokensSet) {
   let overlap = 0;
   profileTokens.forEach((token) => {
-    if (mentorTokensSet.has(token)) {
-      overlap += 1;
-    }
+    if (mentorTokensSet.has(token)) overlap += 1;
   });
   return overlap;
 }
@@ -372,8 +368,8 @@ function applyFilters() {
     list = list.filter((item) => (item.searchText || "").toLowerCase().includes(keyword));
   }
 
-  if (shouldPrioritizeDirectMentors(direction)) {
-    list = moveDirectMentorsToFront(list);
+  if (shouldPrioritizeMentors(direction)) {
+    list = movePriorityMentorsToFront(list);
   }
 
   state.visibleMentors = list;
@@ -386,27 +382,29 @@ function applyFilters() {
   }
 }
 
-function shouldPrioritizeDirectMentors(direction) {
+function shouldPrioritizeMentors(direction) {
   const byFilter = direction === "产品设计";
-  const byProfile = state.preferDirectMentorsByProfile;
+  const byProfile = state.preferPriorityMentorsByProfile;
   return byFilter || byProfile;
 }
 
-function moveDirectMentorsToFront(list) {
-  const direct = [];
+function movePriorityMentorsToFront(list) {
+  const priority = [];
   const others = [];
+
   list.forEach((item) => {
-    if (isDirectMentor(item)) {
-      direct.push(item);
+    if (isPriorityMentor(item)) {
+      priority.push(item);
     } else {
       others.push(item);
     }
   });
-  return [...direct, ...others];
+
+  return [...priority, ...others];
 }
 
-function isDirectMentor(mentor) {
-  return Boolean(mentor.allowDirectApply || DIRECT_MENTORS.has(mentor.name));
+function isPriorityMentor(mentor) {
+  return Boolean(mentor.isPriority || PRIORITY_MENTORS.has(mentor.name));
 }
 
 function renderMentorList() {
@@ -425,58 +423,43 @@ function renderMentorList() {
     cardNode.style.animationDelay = `${Math.min(index * 0.025, 0.2)}s`;
 
     const photo = cardNode.querySelector(".mentor-photo");
-    photo.src = mentor.photoPath;
+    photo.src = mentor.photoPath || DEFAULT_PHOTO_PATH;
     photo.alt = `${mentor.name} 头像`;
+    photo.addEventListener("error", () => {
+      photo.src = DEFAULT_PHOTO_PATH;
+    }, { once: true });
 
     cardNode.querySelector(".mentor-name").textContent = mentor.name;
     cardNode.querySelector(".mentor-meta").textContent = `${mentor.direction} · ${mentor.title}`;
     cardNode.querySelector(".mentor-research").textContent = mentor.researchAreas || "待补充";
 
-    const badge = cardNode.querySelector(".badge");
-    if (isDirectMentor(mentor)) {
-      badge.textContent = "可直投";
-      badge.classList.remove("hidden");
-    } else {
-      badge.classList.add("hidden");
-    }
-
     const detailBtn = cardNode.querySelector(".detail-btn");
     detailBtn.addEventListener("click", () => openDetail(mentor));
 
-    const actions = cardNode.querySelector(".mentor-actions");
     const contactBtn = cardNode.querySelector(".contact-btn");
     contactBtn.textContent = "复制邮箱";
     contactBtn.addEventListener("click", () => copyEmail(mentor.email));
-
-    if (isDirectMentor(mentor)) {
-      const directBtn = document.createElement("button");
-      directBtn.type = "button";
-      directBtn.className = "contact-btn direct-btn";
-      directBtn.textContent = "简历直投";
-      directBtn.addEventListener("click", () => openDirectApplyDialog(mentor));
-      actions.appendChild(directBtn);
-    }
 
     els.mentorList.appendChild(cardNode);
   });
 }
 
 function openDetail(mentor) {
-  state.selectedMentor = mentor;
-  const actionButtons = isDirectMentor(mentor)
-    ? `<button type="button" id="detailEmailBtn">复制邮箱</button><button type="button" id="detailDirectBtn" class="direct-btn">简历直投</button>`
-    : `<button type="button" id="detailEmailBtn">复制邮箱</button>`;
+  const profileLink = mentor.profileUrl
+    ? `<p class="detail-meta">官网主页：<a href="${mentor.profileUrl}" target="_blank" rel="noopener">查看导师介绍</a></p>`
+    : "";
 
   els.detailContent.innerHTML = `
     <div class="detail-head">
-      <img class="detail-photo" src="${mentor.photoPath}" alt="${mentor.name} 头像">
+      <img class="detail-photo" src="${mentor.photoPath || DEFAULT_PHOTO_PATH}" alt="${mentor.name} 头像">
       <div>
         <h3>${mentor.name}</h3>
         <p class="detail-meta">${mentor.direction} · ${mentor.title}</p>
         <p class="detail-meta">籍贯：${mentor.origin || "未公开"}</p>
         <p class="detail-meta">出生年份：${mentor.birthYear || "未公开"}</p>
         <p class="detail-meta">邮箱：${mentor.email || "未公开"}</p>
-        <div class="action-row">${actionButtons}</div>
+        ${profileLink}
+        <div class="action-row"><button type="button" id="detailEmailBtn">复制邮箱</button></div>
       </div>
     </div>
     <div class="detail-block">
@@ -484,19 +467,21 @@ function openDetail(mentor) {
       <p>${mentor.researchAreas || "待补充"}</p>
     </div>
     <div class="detail-block">
-      <h4>备注</h4>
+      <h4>简介</h4>
       <p>${mentor.notes || "待补充"}</p>
     </div>
   `;
 
+  const detailPhoto = els.detailContent.querySelector(".detail-photo");
+  if (detailPhoto) {
+    detailPhoto.addEventListener("error", () => {
+      detailPhoto.src = DEFAULT_PHOTO_PATH;
+    }, { once: true });
+  }
+
   const detailEmailBtn = document.getElementById("detailEmailBtn");
   if (detailEmailBtn) {
     detailEmailBtn.addEventListener("click", () => copyEmail(mentor.email));
-  }
-
-  const detailDirectBtn = document.getElementById("detailDirectBtn");
-  if (detailDirectBtn) {
-    detailDirectBtn.addEventListener("click", () => openDirectApplyDialog(mentor));
   }
 
   els.detailDrawer.hidden = false;
@@ -504,240 +489,12 @@ function openDetail(mentor) {
 
 function closeDetail() {
   els.detailDrawer.hidden = true;
-  state.selectedMentor = null;
-}
-
-function openDirectApplyDialog(mentor) {
-  if (!isDirectMentor(mentor)) {
-    copyEmail(mentor.email);
-    return;
-  }
-
-  state.selectedMentor = mentor;
-  els.applyMentorName.textContent = `投递目标：${mentor.name}（${mentor.direction}）`;
-  els.applyMsg.textContent = "";
-  els.applyForm.reset();
-  els.applyDialog.showModal();
-}
-
-async function onSubmitDirectApply(event) {
-  event.preventDefault();
-  els.applyMsg.style.color = "#b63f3f";
-
-  if (!state.selectedMentor) {
-    els.applyMsg.textContent = "未识别导师，请重新打开直投入口。";
-    return;
-  }
-
-  const name = normalizeText(els.studentName.value);
-  const phone = normalizeText(els.studentPhone.value);
-  const email = normalizeText(els.studentEmail.value);
-  const intro = normalizeText(els.studentIntro.value);
-  const file = els.resumeFile.files[0];
-
-  if (!name || !phone || !email || !file) {
-    els.applyMsg.textContent = "请完整填写信息并上传简历。";
-    return;
-  }
-
-  const ext = file.name.split(".").pop().toLowerCase();
-  if (!ALLOWED_FILE_EXT.includes(ext)) {
-    els.applyMsg.textContent = "附件格式仅支持 PDF/DOC/DOCX。";
-    return;
-  }
-
-  if (file.size > MAX_FILE_SIZE) {
-    els.applyMsg.textContent = "附件不能超过 10MB。";
-    return;
-  }
-
-  els.submitApplyBtn.disabled = true;
-
-  const payload = {
-    mentorId: state.selectedMentor.id,
-    mentorName: state.selectedMentor.name,
-    mentorDirection: state.selectedMentor.direction,
-    studentName: name,
-    studentPhone: phone,
-    studentEmail: email,
-    intro,
-    originalFileName: file.name,
-    submittedAt: new Date().toISOString()
-  };
-
-  try {
-    const result = await submitDirectApplication(payload, file);
-    els.applyMsg.style.color = "#0a4c38";
-    if (result.mode === "supabase") {
-      els.applyMsg.textContent = result.notified
-        ? "提交成功：简历已入库并发送通知。"
-        : "提交成功：简历已入库。";
-    } else if (result.mode === "api") {
-      els.applyMsg.textContent = "提交成功：简历已发送。";
-    } else {
-      els.applyMsg.textContent = "提交成功：已本地暂存，待后台接通后补发。";
-    }
-
-    setTimeout(() => {
-      els.applyDialog.close();
-    }, 900);
-  } catch (error) {
-    els.applyMsg.style.color = "#b63f3f";
-    els.applyMsg.textContent = `提交失败：${error.message}`;
-  } finally {
-    els.submitApplyBtn.disabled = false;
-  }
-}
-
-async function submitDirectApplication(payload, file) {
-  const apiEndpoint = normalizeText(getCfg("__DIRECT_APPLY_API__", ""));
-  if (apiEndpoint) {
-    const ok = await uploadViaDirectApi(apiEndpoint, payload, file);
-    if (ok) {
-      return { ok: true, mode: "api", notified: false };
-    }
-  }
-
-  const supabaseResult = await uploadViaSupabase(payload, file);
-  if (supabaseResult.ok) {
-    return supabaseResult;
-  }
-
-  saveApplyDraft(payload);
-  return { ok: true, mode: "local", notified: false };
-}
-
-async function uploadViaDirectApi(endpoint, payload, file) {
-  const formData = new FormData();
-  Object.entries(payload).forEach(([key, value]) => formData.append(key, value));
-  formData.append("resume", file);
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    body: formData
-  });
-  return response.ok;
-}
-
-async function uploadViaSupabase(payload, file) {
-  const client = createSupabaseClient();
-  if (!client) {
-    return { ok: false, mode: "none", notified: false };
-  }
-
-  const bucket = getCfg("__SUPABASE_BUCKET__", "resume_uploads");
-  const table = getCfg("__SUPABASE_TABLE__", "direct_applications");
-
-  const ext = (file.name.split(".").pop() || "pdf").toLowerCase();
-  const safeFileName = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
-  const filePath = `${payload.mentorId}/${safeFileName}`;
-
-  const { error: uploadError } = await client.storage.from(bucket).upload(filePath, file, {
-    cacheControl: "3600",
-    upsert: false
-  });
-
-  if (uploadError) {
-    throw new Error(`文件上传失败：${uploadError.message}`);
-  }
-
-  const insertPayload = {
-    mentor_id: payload.mentorId,
-    mentor_name: payload.mentorName,
-    mentor_direction: payload.mentorDirection,
-    student_name: payload.studentName,
-    student_phone: payload.studentPhone,
-    student_email: payload.studentEmail,
-    intro: payload.intro,
-    resume_bucket: bucket,
-    resume_path: filePath,
-    resume_name: payload.originalFileName,
-    submit_source: "h5",
-    status: "submitted"
-  };
-
-  const { data, error: insertError } = await client
-    .from(table)
-    .insert(insertPayload)
-    .select("id")
-    .single();
-
-  if (insertError) {
-    throw new Error(`记录写入失败：${insertError.message}`);
-  }
-
-  const notified = await notifyOwner({
-    id: data?.id,
-    ...insertPayload,
-    submitted_at: payload.submittedAt,
-    owner_email: getCfg("__OWNER_EMAIL__", "")
-  });
-
-  return { ok: true, mode: "supabase", notified };
-}
-
-function createSupabaseClient() {
-  if (state.supabaseClient) return state.supabaseClient;
-
-  const supabaseUrl = normalizeText(getCfg("__SUPABASE_URL__", ""));
-  const supabaseAnonKey = normalizeText(getCfg("__SUPABASE_ANON_KEY__", ""));
-  const supabaseFactory =
-    typeof window !== "undefined" && window.supabase && typeof window.supabase.createClient === "function"
-      ? window.supabase.createClient
-      : null;
-
-  if (!supabaseFactory || !supabaseUrl || !supabaseAnonKey) {
-    return null;
-  }
-
-  state.supabaseClient = supabaseFactory(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false }
-  });
-  return state.supabaseClient;
-}
-
-async function notifyOwner(payload) {
-  const webhookUrl = normalizeText(getCfg("__NOTIFY_WEBHOOK_URL__", ""));
-  if (!webhookUrl) {
-    return false;
-  }
-
-  const headers = {
-    "Content-Type": "application/json"
-  };
-  const secret = normalizeText(getCfg("__NOTIFY_WEBHOOK_SECRET__", ""));
-  if (secret) {
-    headers["x-webhook-secret"] = secret;
-  }
-
-  try {
-    const response = await fetch(webhookUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload)
-    });
-    return response.ok;
-  } catch (_) {
-    return false;
-  }
-}
-
-function saveApplyDraft(payload) {
-  const oldQueue = JSON.parse(localStorage.getItem("directApplyQueue") || "[]");
-  oldQueue.push(payload);
-  localStorage.setItem("directApplyQueue", JSON.stringify(oldQueue));
-}
-
-function getCfg(name, fallbackValue = "") {
-  if (typeof window === "undefined") return fallbackValue;
-  const value = window[name];
-  return value === undefined || value === null ? fallbackValue : value;
 }
 
 async function copyEmail(email) {
   const value = normalizeText(email);
   if (!value || value.includes("未公开") || value.includes("未在公开信息中明确")) {
-    showTempMessage("该导师邮箱待补充，请先查看备注信息。", false);
+    showTempMessage("该导师邮箱待补充，请先查看官网主页。", false);
     return;
   }
 
@@ -764,12 +521,22 @@ function onReset() {
   if (state.isAnalyzing) return;
 
   els.profileForm.reset();
+  clearChipGroup(els.targetDirectionChips, els.targetDirection, els.targetDirectionExtra);
+  clearChipGroup(els.currentSkillsChips, els.currentSkills, els.currentSkillsExtra);
+  clearChipGroup(els.careerPlanChips, els.careerPlan, els.careerPlanExtra);
+
   els.formMsg.textContent = "";
   els.formMsg.style.color = "#b63f3f";
   state.profile = null;
-  state.preferDirectMentorsByProfile = false;
+  state.preferPriorityMentorsByProfile = false;
   state.rankedMentors = [...state.mentors];
   applyFilters();
+}
+
+function clearChipGroup(container, hiddenInput, extraInput) {
+  container.querySelectorAll(".chip.active").forEach((node) => node.classList.remove("active"));
+  hiddenInput.value = "";
+  extraInput.value = "";
 }
 
 function persistProfile(profile) {
@@ -782,10 +549,37 @@ function hydrateProfileFromStorage() {
 
   try {
     const saved = JSON.parse(savedRaw);
-    els.targetDirection.value = saved.targetDirection || "";
-    els.currentSkills.value = saved.currentSkills || "";
-    els.careerPlan.value = saved.careerPlan || "";
+    applySavedToChipGroup(saved.targetDirection || "", els.targetDirectionChips, els.targetDirection, els.targetDirectionExtra);
+    applySavedToChipGroup(saved.currentSkills || "", els.currentSkillsChips, els.currentSkills, els.currentSkillsExtra);
+    applySavedToChipGroup(saved.careerPlan || "", els.careerPlanChips, els.careerPlan, els.careerPlanExtra);
   } catch (_) {
     localStorage.removeItem("mentorProfile");
   }
+}
+
+function applySavedToChipGroup(rawValue, container, hiddenInput, extraInput) {
+  clearChipGroup(container, hiddenInput, extraInput);
+
+  const value = normalizeText(rawValue);
+  if (!value) {
+    syncChipGroup(container, hiddenInput, extraInput);
+    return;
+  }
+
+  const chipButtons = [...container.querySelectorAll(".chip")];
+  const chipValues = new Set(chipButtons.map((node) => normalizeText(node.dataset.value)));
+  const parts = value.split(/[、,，;；/]/).map((item) => normalizeText(item)).filter(Boolean);
+  const extras = [];
+
+  parts.forEach((part) => {
+    if (chipValues.has(part)) {
+      const button = chipButtons.find((node) => normalizeText(node.dataset.value) === part);
+      if (button) button.classList.add("active");
+    } else {
+      extras.push(part);
+    }
+  });
+
+  extraInput.value = extras.join("、");
+  syncChipGroup(container, hiddenInput, extraInput);
 }

@@ -22,24 +22,54 @@
   <main class="app-shell">
     <section class="panel form-panel" aria-label="学生画像填写">
       <h2>1. 学生画像</h2>
-      <p class="muted">请填写你的方向、已有技能与职业规划，系统会在后台进行匹配评分。</p>
+      <p class="muted">尽量点选，不用长篇填写。系统会按你的选择在后台完成匹配评分。</p>
 
       <form id="profileForm" novalidate>
-        <label for="targetDirection">目标方向（必填）</label>
-        <textarea id="targetDirection" name="targetDirection" placeholder="例如：我希望做产品创新和服务设计，偏智能硬件方向。" required></textarea>
-
-        <div class="chip-row" id="directionChips">
+        <label>目标方向（必选，可多选）</label>
+        <div class="chip-row selectable" id="targetDirectionChips">
           <button type="button" class="chip" data-value="包装设计">包装设计</button>
           <button type="button" class="chip" data-value="传达与媒体设计">传达与媒体设计</button>
           <button type="button" class="chip" data-value="产品设计">产品设计</button>
           <button type="button" class="chip" data-value="环境设计">环境设计</button>
+          <button type="button" class="chip" data-value="设计历史与理论">设计历史与理论</button>
+          <button type="button" class="chip" data-value="智能包装设计与技术">智能包装设计与技术</button>
+          <button type="button" class="chip" data-value="乡村振兴与生态设计">乡村振兴与生态设计</button>
         </div>
+        <input id="targetDirection" name="targetDirection" type="hidden" required>
+        <input id="targetDirectionExtra" name="targetDirectionExtra" type="text" maxlength="80" placeholder="方向补充（可选）">
 
-        <label for="currentSkills">已掌握技能（必填）</label>
-        <textarea id="currentSkills" name="currentSkills" placeholder="例如：PS、AI、Blender、C4D、手绘、用户访谈、原型设计。" required></textarea>
+        <label>已掌握技能（必选，可多选）</label>
+        <div class="chip-row selectable" id="currentSkillsChips">
+          <button type="button" class="chip" data-value="品牌策划">品牌策划</button>
+          <button type="button" class="chip" data-value="视觉设计">视觉设计</button>
+          <button type="button" class="chip" data-value="包装结构">包装结构</button>
+          <button type="button" class="chip" data-value="材料工艺">材料工艺</button>
+          <button type="button" class="chip" data-value="交互设计">交互设计</button>
+          <button type="button" class="chip" data-value="用户研究">用户研究</button>
+          <button type="button" class="chip" data-value="产品建模">产品建模</button>
+          <button type="button" class="chip" data-value="动画与影像">动画与影像</button>
+          <button type="button" class="chip" data-value="空间设计">空间设计</button>
+          <button type="button" class="chip" data-value="设计史论">设计史论</button>
+          <button type="button" class="chip" data-value="项目管理">项目管理</button>
+          <button type="button" class="chip" data-value="AI创作工具">AI创作工具</button>
+        </div>
+        <input id="currentSkills" name="currentSkills" type="hidden" required>
+        <input id="currentSkillsExtra" name="currentSkillsExtra" type="text" maxlength="100" placeholder="技能补充（可选）">
 
-        <label for="careerPlan">未来职业规划（必填）</label>
-        <textarea id="careerPlan" name="careerPlan" placeholder="例如：毕业后希望进入消费电子公司做产品体验设计，后续转创新管理。" required></textarea>
+        <label>未来职业规划（必选，可多选）</label>
+        <div class="chip-row selectable" id="careerPlanChips">
+          <button type="button" class="chip" data-value="企业产品设计">企业产品设计</button>
+          <button type="button" class="chip" data-value="品牌与包装设计">品牌与包装设计</button>
+          <button type="button" class="chip" data-value="数字媒体与交互">数字媒体与交互</button>
+          <button type="button" class="chip" data-value="环境与空间设计">环境与空间设计</button>
+          <button type="button" class="chip" data-value="文旅与乡村振兴">文旅与乡村振兴</button>
+          <button type="button" class="chip" data-value="高校/科研机构">高校/科研机构</button>
+          <button type="button" class="chip" data-value="继续攻读博士">继续攻读博士</button>
+          <button type="button" class="chip" data-value="创业与设计服务">创业与设计服务</button>
+          <button type="button" class="chip" data-value="跨学科创新">跨学科创新</button>
+        </div>
+        <input id="careerPlan" name="careerPlan" type="hidden" required>
+        <input id="careerPlanExtra" name="careerPlanExtra" type="text" maxlength="100" placeholder="职业规划补充（可选）">
 
         <label class="checkbox-wrap">
           <input id="privacyConsent" type="checkbox" required>
@@ -79,43 +109,12 @@
     <div id="detailContent"></div>
   </section>
 
-  <dialog id="applyDialog" class="apply-dialog">
-    <form id="applyForm" method="dialog">
-      <h3>简历直投</h3>
-      <p id="applyMentorName" class="muted"></p>
-
-      <label for="studentName">姓名</label>
-      <input id="studentName" name="studentName" type="text" maxlength="30" required>
-
-      <label for="studentPhone">手机号</label>
-      <input id="studentPhone" name="studentPhone" type="tel" maxlength="20" required>
-
-      <label for="studentEmail">邮箱</label>
-      <input id="studentEmail" name="studentEmail" type="email" maxlength="80" required>
-
-      <label for="studentIntro">简短自述（可选）</label>
-      <textarea id="studentIntro" name="studentIntro" maxlength="800" placeholder="补充你的项目经验、作品方向等。"></textarea>
-
-      <label for="resumeFile">简历附件（PDF/DOC/DOCX，<=10MB）</label>
-      <input id="resumeFile" name="resumeFile" type="file" accept=".pdf,.doc,.docx" required>
-
-      <p class="muted small">直投入口仅对指定导师开放。未接入后台时会先本地暂存记录。</p>
-      <p id="applyMsg" class="form-msg" aria-live="polite"></p>
-
-      <div class="action-row">
-        <button id="submitApplyBtn" type="submit">提交简历</button>
-        <button id="cancelApplyBtn" type="button" class="ghost">取消</button>
-      </div>
-    </form>
-  </dialog>
-
   <template id="mentorCardTemplate">
     <article class="mentor-card">
       <img class="mentor-photo" alt="">
       <div class="mentor-main">
         <div class="mentor-title-row">
           <h3 class="mentor-name"></h3>
-          <span class="badge"></span>
         </div>
         <p class="mentor-meta"></p>
         <p class="mentor-research"></p>
@@ -128,8 +127,6 @@
   </template>
 
   <script src="data/mentors.inline.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
   <script src="app.js" defer></script>
 </body>
 </html>

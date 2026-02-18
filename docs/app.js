@@ -1,11 +1,11 @@
 ﻿const DATA_URL = "data/mentors.json";
-const DATA_VERSION = "20260218c";
-const INLINE_DATA_URL = `data/mentors.inline.js?v=${DATA_VERSION}`;
+const INLINE_DATA_URL = "data/mentors.inline.js";
 const PRIORITY_MENTORS = new Set(["田飞", "何铭锋"]);
 const SOURCE_URL = "https://art.hut.edu.cn/ljyjx.htm";
 const PRIORITY_MIN_SCORE = 64;
 const PRIORITY_CLARITY_THRESHOLD = 42;
 const DEFAULT_PHOTO_PATH = "photos/mentor-placeholder.svg";
+const LIST_BATCH_SIZE = 12;
 
 const DIRECTION_KEYWORDS = {
   "包装设计": ["包装", "品牌", "文创", "材料", "结构", "智能包装", "包装设计"],
@@ -26,7 +26,10 @@ const state = {
   visibleMentors: [],
   preferPriorityMentorsByProfile: false,
   isAnalyzing: false,
-  profile: null
+  profile: null,
+  mentorsReady: false,
+  mentorLoadPromise: null,
+  renderLimit: LIST_BATCH_SIZE
 };
 
 const toastState = {
@@ -57,10 +60,10 @@ const els = {
   resetBtn: document.getElementById("resetBtn"),
   formMsg: document.getElementById("formMsg"),
   copyShareBtn: document.getElementById("copyShareBtn"),
-  copyShareTopBtn: document.getElementById("copyShareTopBtn"),
   directionFilter: document.getElementById("directionFilter"),
   keywordFilter: document.getElementById("keywordFilter"),
   mentorList: document.getElementById("mentorList"),
+  loadMoreBtn: document.getElementById("loadMoreBtn"),
   resultCount: document.getElementById("resultCount"),
   resultAiNote: document.getElementById("resultAiNote"),
   detailDrawer: document.getElementById("detailDrawer"),
@@ -77,9 +80,7 @@ document.addEventListener("DOMContentLoaded", init);
 async function init() {
   bindEvents();
   bindChipGroups();
-  await loadMentors();
   hydrateProfileFromStorage();
-  applyFilters();
   showLaunchView();
 }
 
@@ -95,14 +96,14 @@ function bindEvents() {
   if (els.copyShareBtn) {
     els.copyShareBtn.addEventListener("click", onCopyShare);
   }
-  if (els.copyShareTopBtn) {
-    els.copyShareTopBtn.addEventListener("click", onCopyShare);
-  }
   if (els.directionFilter) {
-    els.directionFilter.addEventListener("change", applyFilters);
+    els.directionFilter.addEventListener("change", () => applyFilters({ resetRender: true }));
   }
   if (els.keywordFilter) {
-    els.keywordFilter.addEventListener("input", applyFilters);
+    els.keywordFilter.addEventListener("input", () => applyFilters({ resetRender: true }));
+  }
+  if (els.loadMoreBtn) {
+    els.loadMoreBtn.addEventListener("click", onLoadMoreMentors);
   }
 
   if (els.closeDetailBtn) {
@@ -124,7 +125,7 @@ function showLaunchView() {
   }
 }
 
-function enterApp() {
+async function enterApp() {
   if (els.launchScreen) {
     els.launchScreen.hidden = true;
   }
@@ -132,6 +133,18 @@ function enterApp() {
     els.appMain.classList.remove("app-hidden");
   }
   showFormPage();
+
+  if (state.mentorsReady) return;
+
+  els.formMsg.style.color = "#2c5e4c";
+  els.formMsg.textContent = "正在加载导师库...";
+  try {
+    await ensureMentorsReady();
+    els.formMsg.textContent = "";
+  } catch (error) {
+    els.formMsg.style.color = "#b63f3f";
+    els.formMsg.textContent = `数据加载失败：${error.message}`;
+  }
 }
 
 function showFormPage() {
@@ -198,11 +211,16 @@ async function loadMentors() {
 
     state.mentors = payload.mentors.map((mentor) => normalizeMentor(mentor));
     state.rankedMentors = [...state.mentors];
+    state.mentorsReady = true;
+    state.renderLimit = LIST_BATCH_SIZE;
     fillDirectionFilter();
-    els.resultCount.textContent = `导师库 ${state.mentors.length} 位`;
+    applyFilters({ resetRender: true });
+    if (els.resultCount) {
+      els.resultCount.textContent = `导师库 ${state.mentors.length} 位`;
+    }
   } catch (error) {
-    els.formMsg.style.color = "#b63f3f";
-    els.formMsg.textContent = `数据加载失败：${error.message}`;
+    state.mentorsReady = false;
+    throw error;
   }
 }
 
@@ -211,42 +229,76 @@ async function loadMentorPayload() {
     return window.__MENTORS_PAYLOAD__;
   }
 
-  const inlinePayload = await loadInlineMentorPayload();
-  if (inlinePayload && Array.isArray(inlinePayload.mentors) && inlinePayload.mentors.length > 0) {
-    return inlinePayload;
+  const isFileProtocol = window.location.protocol === "file:";
+  if (isFileProtocol) {
+    const inlinePayload = await loadInlineMentorPayload();
+    if (inlinePayload) return inlinePayload;
+    throw new Error("本地模式数据加载失败，请检查 data/mentors.inline.js");
   }
 
   try {
-    const res = await fetch(DATA_URL, { cache: "no-store" });
+    const res = await fetch(DATA_URL, { cache: "force-cache" });
     if (!res.ok) throw new Error(`加载数据失败: ${res.status}`);
     return await res.json();
   } catch (fetchError) {
+    const inlinePayload = await loadInlineMentorPayload();
+    if (inlinePayload) return inlinePayload;
     throw fetchError;
   }
 }
 
 async function loadInlineMentorPayload() {
-  if (window.__MENTORS_PAYLOAD__) {
+  if (window.__MENTORS_PAYLOAD__ && Array.isArray(window.__MENTORS_PAYLOAD__.mentors) && window.__MENTORS_PAYLOAD__.mentors.length > 0) {
     return window.__MENTORS_PAYLOAD__;
   }
 
   try {
     await loadScript(INLINE_DATA_URL);
-    return window.__MENTORS_PAYLOAD__ || null;
   } catch (_) {
     return null;
   }
+
+  if (window.__MENTORS_PAYLOAD__ && Array.isArray(window.__MENTORS_PAYLOAD__.mentors) && window.__MENTORS_PAYLOAD__.mentors.length > 0) {
+    return window.__MENTORS_PAYLOAD__;
+  }
+  return null;
 }
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      if (existing.dataset.loaded === "1") {
+        resolve();
+        return;
+      }
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error(`脚本加载失败: ${src}`)), { once: true });
+      return;
+    }
+
     const script = document.createElement("script");
     script.src = src;
     script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`脚本加载失败: ${src}`));
+    script.addEventListener("load", () => {
+      script.dataset.loaded = "1";
+      resolve();
+    }, { once: true });
+    script.addEventListener("error", () => reject(new Error(`脚本加载失败: ${src}`)), { once: true });
     document.head.appendChild(script);
   });
+}
+
+async function ensureMentorsReady() {
+  if (state.mentorsReady) return;
+
+  if (!state.mentorLoadPromise) {
+    state.mentorLoadPromise = loadMentors().finally(() => {
+      state.mentorLoadPromise = null;
+    });
+  }
+
+  await state.mentorLoadPromise;
 }
 
 function normalizeMentor(mentor) {
@@ -301,6 +353,14 @@ async function onAnalyze(event) {
     return;
   }
 
+  try {
+    await ensureMentorsReady();
+  } catch (error) {
+    els.formMsg.style.color = "#b63f3f";
+    els.formMsg.textContent = `数据加载失败：${error.message}`;
+    return;
+  }
+
   state.isAnalyzing = true;
   els.analyzeBtn.disabled = true;
   els.resetBtn.disabled = true;
@@ -326,7 +386,7 @@ async function onAnalyze(event) {
     persistProfile(profile);
     els.formMsg.style.color = "#0a4c38";
     els.formMsg.textContent = "AI 分析完成，已更新导师优先顺序。";
-    applyFilters();
+    applyFilters({ resetRender: true });
     showResultPage();
   } catch (error) {
     els.formMsg.style.color = "#b63f3f";
@@ -488,9 +548,10 @@ function normalizeText(text) {
   return (text || "").replace(/\s+/g, " ").trim();
 }
 
-function applyFilters() {
-  const direction = els.directionFilter.value;
-  const keyword = normalizeText(els.keywordFilter.value).toLowerCase();
+function applyFilters(options = {}) {
+  const resetRender = options.resetRender !== false;
+  const direction = els.directionFilter ? els.directionFilter.value : "";
+  const keyword = normalizeText(els.keywordFilter ? els.keywordFilter.value : "").toLowerCase();
 
   let list = state.rankedMentors.length > 0 ? [...state.rankedMentors] : [...state.mentors];
 
@@ -506,14 +567,20 @@ function applyFilters() {
     list = movePriorityMentorsToFront(list);
   }
 
+  if (resetRender) {
+    state.renderLimit = LIST_BATCH_SIZE;
+  }
+
   state.visibleMentors = list;
   renderMentorList();
   updateResultAiNote();
 
-  if (state.profile) {
-    els.resultCount.textContent = `推荐 ${list.length} 位（共 ${state.rankedMentors.length}）`;
-  } else {
-    els.resultCount.textContent = `导师库 ${list.length} 位`;
+  if (els.resultCount) {
+    if (state.profile) {
+      els.resultCount.textContent = `推荐 ${list.length} 位（共 ${state.rankedMentors.length}）`;
+    } else {
+      els.resultCount.textContent = `导师库 ${list.length} 位`;
+    }
   }
 }
 
@@ -567,6 +634,7 @@ function renderMentorList() {
   els.mentorList.innerHTML = "";
 
   if (state.visibleMentors.length === 0) {
+    updateLoadMoreButton(0, 0);
     const empty = document.createElement("p");
     empty.className = "muted";
     empty.textContent = "没有匹配结果，请尝试修改关键词或方向筛选。";
@@ -574,15 +642,20 @@ function renderMentorList() {
     return;
   }
 
+  const renderCount = Math.min(state.renderLimit, state.visibleMentors.length);
+  const mentorsToRender = state.visibleMentors.slice(0, renderCount);
   const rankMap = new Map(state.rankedMentors.map((mentor, index) => [mentorKey(mentor), index + 1]));
 
-  state.visibleMentors.forEach((mentor, index) => {
+  mentorsToRender.forEach((mentor, index) => {
     const cardNode = els.mentorCardTemplate.content.firstElementChild.cloneNode(true);
     cardNode.style.animationDelay = `${Math.min(index * 0.025, 0.2)}s`;
 
     const photo = cardNode.querySelector(".mentor-photo");
     photo.src = mentor.photoPath || DEFAULT_PHOTO_PATH;
     photo.alt = `${mentor.name} 头像`;
+    photo.loading = index < 2 ? "eager" : "lazy";
+    photo.decoding = "async";
+    photo.setAttribute("fetchpriority", index < 2 ? "high" : "low");
     photo.addEventListener("error", () => {
       photo.src = DEFAULT_PHOTO_PATH;
     }, { once: true });
@@ -613,6 +686,22 @@ function renderMentorList() {
 
     els.mentorList.appendChild(cardNode);
   });
+
+  updateLoadMoreButton(state.visibleMentors.length, mentorsToRender.length);
+}
+
+function onLoadMoreMentors() {
+  state.renderLimit += LIST_BATCH_SIZE;
+  renderMentorList();
+}
+
+function updateLoadMoreButton(total, rendered) {
+  if (!els.loadMoreBtn) return;
+  const canLoadMore = total > rendered;
+  els.loadMoreBtn.hidden = !canLoadMore;
+  if (canLoadMore) {
+    els.loadMoreBtn.textContent = `加载更多导师（已显示 ${rendered}/${total}）`;
+  }
 }
 
 function mentorKey(mentor) {
@@ -807,7 +896,7 @@ function onReset() {
   state.profile = null;
   state.preferPriorityMentorsByProfile = false;
   state.rankedMentors = [...state.mentors];
-  applyFilters();
+  applyFilters({ resetRender: true });
 }
 
 function clearChipGroup(container, hiddenInput, extraInput) {

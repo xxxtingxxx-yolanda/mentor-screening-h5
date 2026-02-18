@@ -150,45 +150,14 @@ h3 {
   font-size: 0.92rem;
 }
 
-.launch-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.launch-item {
-  border: 1px solid #e1ece7;
-  background: linear-gradient(180deg, #ffffff 0%, #fcfffe 100%);
-  border-radius: 12px;
-  padding: 12px;
-}
-
-.launch-item h3 {
-  font-size: 0.95rem;
-}
-
-.launch-item p {
-  margin: 8px 0 0;
-  color: #3d4650;
-  font-size: 0.88rem;
-  line-height: 1.58;
-}
-
-.launch-meta {
-  border: 1px solid #e6edf2;
-  background: #fbfdff;
-  border-radius: 12px;
-  padding: 12px;
-}
-
-.launch-meta p {
+.launch-points {
   margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: #33424f;
   font-size: 0.9rem;
-  color: #38414c;
-  line-height: 1.6;
-}
-
-.launch-meta p + p {
-  margin-top: 6px;
+  line-height: 1.55;
 }
 
 @keyframes launch-fade {
@@ -230,8 +199,19 @@ h3 {
 }
 
 .ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 104px;
+  border-radius: 10px;
+  padding: 10px 14px;
   background: #eef2f6;
   color: #243545;
+  text-decoration: none;
+}
+
+.launch-source-link:hover {
+  background: #e5edf4;
 }
 
 .app-hidden {
@@ -441,6 +421,27 @@ button.ghost {
   gap: 8px;
   margin-top: 12px;
   margin-bottom: 8px;
+}
+
+.filter-panel {
+  margin-top: 12px;
+  border: 1px solid #dee7ef;
+  border-radius: 12px;
+  background: #f8fbfe;
+  padding: 8px 10px 0;
+}
+
+.filter-panel summary {
+  cursor: pointer;
+  color: #1f3f58;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.list-actions {
+  margin-top: 4px;
+  display: flex;
+  justify-content: center;
 }
 
 .mentor-list {
@@ -785,10 +786,6 @@ button.ghost {
 }
 
 @media (min-width: 860px) {
-  .launch-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .app-shell {
     grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.35fr);
     align-items: start;

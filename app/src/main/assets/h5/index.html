@@ -24,25 +24,15 @@
     <div class="launch-card">
       <p class="launch-badge">公益项目</p>
       <h2>湖工大包装设计导师筛选</h2>
-      <p class="launch-sub">3 步完成导师筛选，先看方向再联系。</p>
-      <div class="launch-grid">
-        <article class="launch-item">
-          <h3>项目说明</h3>
-          <p>先点选目标方向、已掌握技能和职业规划，再由系统后台做隐形匹配评分，给出更契合的导师优先顺序。</p>
-        </article>
-        <article class="launch-item">
-          <h3>过来人建议</h3>
-          <p>这是给师弟师妹的实用工具，帮助大家缩短选导摸索时间，少走弯路。</p>
-        </article>
-      </div>
-      <div class="launch-meta">
-        <p><strong>适用学校：</strong>湖南工业大学包装设计艺术学院</p>
-        <p><strong>适用人群：</strong>考研、调剂、拟联系导师同学</p>
-        <p><strong>使用说明：</strong>匹配结果仅供参考，请以学院官方发布信息为准。</p>
-      </div>
+      <p class="launch-sub">1 分钟完成学生画像，快速拿到导师优先顺序。</p>
+      <ul class="launch-points">
+        <li>填写目标方向、已掌握技能、职业规划。</li>
+        <li>系统做隐形匹配分析，返回推荐顺序。</li>
+        <li>结果仅供参考，请以学院官方信息为准。</li>
+      </ul>
       <div class="cover-actions">
         <button type="button" class="cover-btn" id="startAppBtn">立即开始</button>
-        <button type="button" class="ghost-btn" id="copyShareTopBtn">复制转发文案</button>
+        <a class="ghost-btn launch-source-link" href="https://art.hut.edu.cn/ljyjx.htm" target="_blank" rel="noopener">查看学院导师页</a>
       </div>
     </div>
   </section>
@@ -123,16 +113,22 @@
       <p class="muted">系统将综合你的方向、技能和职业规划进行智能匹配分析。</p>
       <p class="result-ai-note" id="resultAiNote">先完成学生画像，AI 会生成优先顺序和匹配解读。</p>
 
-      <div class="toolbar">
-        <label for="directionFilter">方向筛选</label>
-        <select id="directionFilter">
-          <option value="">全部方向</option>
-        </select>
-        <label for="keywordFilter">关键词</label>
-        <input id="keywordFilter" type="search" placeholder="按姓名/研究方向搜索">
-      </div>
+      <details class="filter-panel">
+        <summary>筛选条件（可选）</summary>
+        <div class="toolbar">
+          <label for="directionFilter">方向筛选</label>
+          <select id="directionFilter">
+            <option value="">全部方向</option>
+          </select>
+          <label for="keywordFilter">关键词</label>
+          <input id="keywordFilter" type="search" placeholder="按姓名/研究方向搜索">
+        </div>
+      </details>
 
       <div id="mentorList" class="mentor-list" aria-live="polite"></div>
+      <div class="list-actions">
+        <button type="button" id="loadMoreBtn" class="ghost" hidden>加载更多导师</button>
+      </div>
 
       <section class="share-panel" aria-label="转发建议">
         <h3>把它转发给同方向同学</h3>
@@ -182,7 +178,6 @@
     </div>
   </section>
 
-  <script src="data/mentors.inline.js?v=20260218c" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>

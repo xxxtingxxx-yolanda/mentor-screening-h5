@@ -26,6 +26,11 @@ const state = {
   profile: null
 };
 
+const toastState = {
+  element: null,
+  timerId: null
+};
+
 const els = {
   profileForm: document.getElementById("profileForm"),
   targetDirection: document.getElementById("targetDirection"),
@@ -515,6 +520,34 @@ async function copyEmail(email) {
 function showTempMessage(text, success) {
   els.formMsg.style.color = success ? "#0a4c38" : "#b63f3f";
   els.formMsg.textContent = text;
+  showToast(text, success);
+}
+
+function ensureToastElement() {
+  if (toastState.element) return toastState.element;
+
+  const toast = document.createElement("div");
+  toast.className = "app-toast";
+  toast.setAttribute("role", "status");
+  toast.setAttribute("aria-live", "polite");
+  document.body.appendChild(toast);
+  toastState.element = toast;
+  return toast;
+}
+
+function showToast(text, success) {
+  const toast = ensureToastElement();
+  toast.textContent = text;
+  toast.classList.toggle("error", !success);
+  toast.classList.add("show");
+
+  if (toastState.timerId) {
+    clearTimeout(toastState.timerId);
+  }
+
+  toastState.timerId = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 1800);
 }
 
 function onReset() {

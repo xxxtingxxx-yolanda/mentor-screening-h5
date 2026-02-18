@@ -8,8 +8,6 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="ambient-bg" aria-hidden="true"></div>
-
   <header class="site-header">
     <div class="site-brand">
       <span class="logo-dot"></span>
@@ -28,7 +26,7 @@
 
       <form id="profileForm" novalidate>
         <label for="targetDirection">目标方向（必填）</label>
-        <textarea id="targetDirection" name="targetDirection" maxlength="200" placeholder="例如：我希望做产品创新和服务设计，偏智能硬件方向。" required></textarea>
+        <textarea id="targetDirection" name="targetDirection" placeholder="例如：我希望做产品创新和服务设计，偏智能硬件方向。" required></textarea>
 
         <div class="chip-row" id="directionChips">
           <button type="button" class="chip" data-value="包装设计">包装设计</button>
@@ -38,10 +36,10 @@
         </div>
 
         <label for="currentSkills">已掌握技能（必填）</label>
-        <textarea id="currentSkills" name="currentSkills" maxlength="500" placeholder="例如：PS、AI、Blender、C4D、手绘、用户访谈、原型设计。" required></textarea>
+        <textarea id="currentSkills" name="currentSkills" placeholder="例如：PS、AI、Blender、C4D、手绘、用户访谈、原型设计。" required></textarea>
 
         <label for="careerPlan">未来职业规划（必填）</label>
-        <textarea id="careerPlan" name="careerPlan" maxlength="1000" placeholder="例如：毕业后希望进入消费电子公司做产品体验设计，后续转创新管理。" required></textarea>
+        <textarea id="careerPlan" name="careerPlan" placeholder="例如：毕业后希望进入消费电子公司做产品体验设计，后续转创新管理。" required></textarea>
 
         <label class="checkbox-wrap">
           <input id="privacyConsent" type="checkbox" required>
@@ -61,7 +59,7 @@
         <h2>2. 推荐结果</h2>
         <div class="result-count" id="resultCount">尚未生成</div>
       </div>
-      <p class="muted">当匹配达到阈值时，会优先推送 <strong>田飞老师</strong>、<strong>何铭锋老师</strong> 并开放简历直投。</p>
+      <p class="muted">系统将综合你的方向、技能和职业规划进行智能匹配分析。</p>
 
       <div class="toolbar">
         <label for="directionFilter">方向筛选</label>
@@ -129,6 +127,7 @@
     </article>
   </template>
 
+  <script src="data/mentors.inline.js"></script>
   <script src="config.js"></script>
   <script src="app.js" defer></script>
 </body>

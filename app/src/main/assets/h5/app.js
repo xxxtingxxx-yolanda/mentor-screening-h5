@@ -1,6 +1,7 @@
 ﻿const DATA_URL = "data/mentors.json";
 const DIRECT_MENTORS = new Set(["田飞", "何铭锋"]);
 const DIRECT_THRESHOLD = 72;
+const DIRECT_CLARITY_THRESHOLD = 60;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_FILE_EXT = ["pdf", "doc", "docx"];
 
@@ -22,6 +23,7 @@ const state = {
   rankedMentors: [],
   visibleMentors: [],
   directUnlocked: false,
+  isAnalyzing: false,
   profile: null,
   selectedMentor: null
 };
@@ -95,16 +97,29 @@ function bindEvents() {
 
 async function loadMentors() {
   try {
-    const res = await fetch(DATA_URL, { cache: "no-store" });
-    if (!res.ok) {
-      throw new Error(`加载数据失败: ${res.status}`);
+    let payload = null;
+    if (
+      typeof window !== "undefined" &&
+      window.__MENTORS_PAYLOAD__ &&
+      Array.isArray(window.__MENTORS_PAYLOAD__.mentors)
+    ) {
+      payload = window.__MENTORS_PAYLOAD__;
     }
-    const payload = await res.json();
+
+    if (!payload) {
+      const res = await fetch(DATA_URL, { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(`加载数据失败: ${res.status}`);
+      }
+      payload = await res.json();
+    }
+
     state.mentors = payload.mentors.map((mentor) => normalizeMentor(mentor));
     state.rankedMentors = [...state.mentors];
     fillDirectionFilter();
     els.resultCount.textContent = `导师库 ${state.mentors.length} 位`;
   } catch (error) {
+    els.formMsg.style.color = "#b63f3f";
     els.formMsg.textContent = `数据加载失败：${error.message}`;
   }
 }
@@ -137,9 +152,9 @@ function fillDirectionFilter() {
   });
 }
 
-function onAnalyze(event) {
+async function onAnalyze(event) {
   event.preventDefault();
-  els.formMsg.textContent = "";
+  if (state.isAnalyzing) return;
 
   const profile = {
     targetDirection: normalizeText(els.targetDirection.value),
@@ -149,33 +164,43 @@ function onAnalyze(event) {
 
   const validationError = validateProfile(profile, els.privacyConsent.checked);
   if (validationError) {
+    els.formMsg.style.color = "#b63f3f";
     els.formMsg.textContent = validationError;
     return;
   }
 
-  const scored = rankMentors(profile);
-  state.profile = profile;
-  state.rankedMentors = scored.sorted;
-  state.directUnlocked = scored.directUnlocked;
+  state.isAnalyzing = true;
+  els.analyzeBtn.disabled = true;
+  els.resetBtn.disabled = true;
 
-  persistProfile(profile);
-  els.formMsg.style.color = "#0a4c38";
-  els.formMsg.textContent = state.directUnlocked
-    ? "匹配完成：已开放重点导师直投入口。"
-    : "匹配完成：已按你的画像生成推荐列表。";
+  try {
+    await playAnalysisAnimation();
 
-  applyFilters();
+    const scored = rankMentors(profile);
+    state.profile = profile;
+    state.rankedMentors = scored.sorted;
+    state.directUnlocked = scored.directUnlocked;
+
+    persistProfile(profile);
+    els.formMsg.style.color = "#0a4c38";
+    els.formMsg.textContent = "AI 分析完成，推荐结果已更新。";
+    applyFilters();
+  } finally {
+    state.isAnalyzing = false;
+    els.analyzeBtn.disabled = false;
+    els.resetBtn.disabled = false;
+  }
 }
 
 function validateProfile(profile, consent) {
-  if (profile.targetDirection.length < 10) {
-    return "请至少填写 10 个字的目标方向。";
+  if (!profile.targetDirection) {
+    return "请填写目标方向。";
   }
-  if (profile.currentSkills.length < 10) {
-    return "请至少填写 10 个字的技能描述。";
+  if (!profile.currentSkills) {
+    return "请填写已掌握技能。";
   }
-  if (profile.careerPlan.length < 20) {
-    return "请至少填写 20 个字的职业规划。";
+  if (!profile.careerPlan) {
+    return "请填写未来职业规划。";
   }
   if (!consent) {
     return "请先勾选隐私授权。";
@@ -183,15 +208,38 @@ function validateProfile(profile, consent) {
   return "";
 }
 
+async function playAnalysisAnimation() {
+  const steps = [
+    "AI 正在解析你的目标方向...",
+    "AI 正在评估技能匹配度...",
+    "AI 正在推演职业规划路径...",
+    "AI 正在生成导师推荐结果..."
+  ];
+
+  els.formMsg.style.color = "#2c5e4c";
+  for (const step of steps) {
+    els.formMsg.textContent = step;
+    await delay(360);
+  }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function rankMentors(profile) {
+  const clarityScore = calcProfileClarity(profile);
+  const profileJoined = `${profile.targetDirection} ${profile.currentSkills} ${profile.careerPlan}`;
+  const hasDirectIntent = /(服务|产品|动画|媒介|机器人|交互|创新|品牌|传播|体验|智能)/.test(profileJoined);
+
   const scoredMentors = state.mentors.map((mentor) => {
     const directionScore = calcDirectionScore(profile.targetDirection, mentor);
     const skillScore = calcOverlapScore(profile.currentSkills, mentor, "skills");
     const careerScore = calcOverlapScore(profile.careerPlan, mentor, "career");
 
     let total = directionScore * 0.5 + skillScore * 0.3 + careerScore * 0.2;
-    if (DIRECT_MENTORS.has(mentor.name) && /(服务|产品|动画|媒介|机器人|交互|创新)/.test(profile.targetDirection + profile.currentSkills)) {
-      total += 6;
+    if (DIRECT_MENTORS.has(mentor.name) && hasDirectIntent && clarityScore >= DIRECT_CLARITY_THRESHOLD) {
+      total += 8;
     }
 
     return {
@@ -203,7 +251,9 @@ function rankMentors(profile) {
   scoredMentors.sort((a, b) => b.hiddenScore - a.hiddenScore);
 
   const directScores = scoredMentors.filter((item) => DIRECT_MENTORS.has(item.name));
-  const directUnlocked = directScores.some((item) => item.hiddenScore >= DIRECT_THRESHOLD);
+  const directUnlocked = directScores.some(
+    (item) => item.hiddenScore >= DIRECT_THRESHOLD || (clarityScore >= DIRECT_CLARITY_THRESHOLD && item.hiddenScore >= 64)
+  );
 
   if (!directUnlocked) {
     return { sorted: scoredMentors, directUnlocked };
@@ -212,6 +262,25 @@ function rankMentors(profile) {
   const topDirect = directScores.sort((a, b) => b.hiddenScore - a.hiddenScore);
   const rest = scoredMentors.filter((item) => !DIRECT_MENTORS.has(item.name));
   return { sorted: [...topDirect, ...rest], directUnlocked };
+}
+
+function calcProfileClarity(profile) {
+  const rawText = `${profile.targetDirection} ${profile.currentSkills} ${profile.careerPlan}`;
+  const tokenCount = extractTokens(rawText).length;
+
+  const sentenceHintCount = [profile.targetDirection, profile.currentSkills, profile.careerPlan]
+    .map((item) => item.replace(/\s+/g, "").length)
+    .filter((len) => len >= 8).length;
+
+  const structureHints = [
+    "例如", "负责", "项目", "目标", "计划", "希望", "擅长", "已经", "未来", "方向", "技能", "作品"
+  ];
+  const structureScore = structureHints.filter((word) => rawText.includes(word)).length;
+
+  const tokenScore = Math.min(50, tokenCount * 2);
+  const sentenceScore = sentenceHintCount * 12;
+  const guideScore = Math.min(14, structureScore * 2);
+  return Math.max(0, Math.min(100, tokenScore + sentenceScore + guideScore));
 }
 
 function calcDirectionScore(inputText, mentor) {
@@ -461,7 +530,7 @@ async function onSubmitDirectApply(event) {
   let remoteOk = false;
   try {
     remoteOk = await submitToRemoteApi(payload, file);
-  } catch (error) {
+  } catch (_) {
     remoteOk = false;
   }
 
@@ -513,7 +582,7 @@ async function copyEmail(email) {
   try {
     await navigator.clipboard.writeText(value);
     showTempMessage(`邮箱已复制：${value}`, true);
-  } catch (error) {
+  } catch (_) {
     const textarea = document.createElement("textarea");
     textarea.value = value;
     document.body.appendChild(textarea);
@@ -530,6 +599,8 @@ function showTempMessage(text, success) {
 }
 
 function onReset() {
+  if (state.isAnalyzing) return;
+
   els.profileForm.reset();
   els.formMsg.textContent = "";
   els.formMsg.style.color = "#b63f3f";

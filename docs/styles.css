@@ -357,6 +357,10 @@ button.ghost {
   padding: 16px;
 }
 
+.detail-drawer[hidden] {
+  display: none !important;
+}
+
 #detailContent {
   width: min(720px, 100%);
   max-height: 88vh;

@@ -1,0 +1,134 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="导师筛选 H5：学生画像填写、后台隐形评分、导师推荐与直投。">
+  <title>导师筛选 H5</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="ambient-bg" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="site-brand">
+      <span class="logo-dot"></span>
+      <div>
+        <h1>导师筛选 H5</h1>
+        <p>移动端优先 · 隐形评分 · 精准分流</p>
+      </div>
+    </div>
+    <p class="header-note">评分仅用于推荐分流，结果以学院官方信息为准。</p>
+  </header>
+
+  <main class="app-shell">
+    <section class="panel form-panel" aria-label="学生画像填写">
+      <h2>1. 学生画像</h2>
+      <p class="muted">请填写你的方向、已有技能与职业规划，系统会在后台进行匹配评分。</p>
+
+      <form id="profileForm" novalidate>
+        <label for="targetDirection">目标方向（必填）</label>
+        <textarea id="targetDirection" name="targetDirection" maxlength="200" placeholder="例如：我希望做产品创新和服务设计，偏智能硬件方向。" required></textarea>
+
+        <div class="chip-row" id="directionChips">
+          <button type="button" class="chip" data-value="包装设计">包装设计</button>
+          <button type="button" class="chip" data-value="传达与媒体设计">传达与媒体设计</button>
+          <button type="button" class="chip" data-value="产品设计">产品设计</button>
+          <button type="button" class="chip" data-value="环境设计">环境设计</button>
+        </div>
+
+        <label for="currentSkills">已掌握技能（必填）</label>
+        <textarea id="currentSkills" name="currentSkills" maxlength="500" placeholder="例如：PS、AI、Blender、C4D、手绘、用户访谈、原型设计。" required></textarea>
+
+        <label for="careerPlan">未来职业规划（必填）</label>
+        <textarea id="careerPlan" name="careerPlan" maxlength="1000" placeholder="例如：毕业后希望进入消费电子公司做产品体验设计，后续转创新管理。" required></textarea>
+
+        <label class="checkbox-wrap">
+          <input id="privacyConsent" type="checkbox" required>
+          <span>我同意将填写信息用于导师匹配与投递处理。</span>
+        </label>
+
+        <div class="action-row">
+          <button type="submit" id="analyzeBtn">生成推荐</button>
+          <button type="button" id="resetBtn" class="ghost">重置</button>
+        </div>
+        <p id="formMsg" class="form-msg" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="panel result-panel" aria-label="推荐结果">
+      <div class="result-head">
+        <h2>2. 推荐结果</h2>
+        <div class="result-count" id="resultCount">尚未生成</div>
+      </div>
+      <p class="muted">当匹配达到阈值时，会优先推送 <strong>田飞老师</strong>、<strong>何铭锋老师</strong> 并开放简历直投。</p>
+
+      <div class="toolbar">
+        <label for="directionFilter">方向筛选</label>
+        <select id="directionFilter">
+          <option value="">全部方向</option>
+        </select>
+        <label for="keywordFilter">关键词</label>
+        <input id="keywordFilter" type="search" placeholder="按姓名/研究方向搜索">
+      </div>
+
+      <div id="mentorList" class="mentor-list" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <section class="detail-drawer" id="detailDrawer" aria-label="导师详情" hidden>
+    <button class="drawer-close" id="closeDetailBtn" type="button" aria-label="关闭详情">×</button>
+    <div id="detailContent"></div>
+  </section>
+
+  <dialog id="applyDialog" class="apply-dialog">
+    <form id="applyForm" method="dialog">
+      <h3>简历直投</h3>
+      <p id="applyMentorName" class="muted"></p>
+
+      <label for="studentName">姓名</label>
+      <input id="studentName" name="studentName" type="text" maxlength="30" required>
+
+      <label for="studentPhone">手机号</label>
+      <input id="studentPhone" name="studentPhone" type="tel" maxlength="20" required>
+
+      <label for="studentEmail">邮箱</label>
+      <input id="studentEmail" name="studentEmail" type="email" maxlength="80" required>
+
+      <label for="studentIntro">简短自述（可选）</label>
+      <textarea id="studentIntro" name="studentIntro" maxlength="800" placeholder="补充你的项目经验、作品方向等。"></textarea>
+
+      <label for="resumeFile">简历附件（PDF/DOC/DOCX，<=10MB）</label>
+      <input id="resumeFile" name="resumeFile" type="file" accept=".pdf,.doc,.docx" required>
+
+      <p class="muted small">直投入口仅对指定导师开放。未接入后台时会先本地暂存记录。</p>
+      <p id="applyMsg" class="form-msg" aria-live="polite"></p>
+
+      <div class="action-row">
+        <button id="submitApplyBtn" type="submit">提交简历</button>
+        <button id="cancelApplyBtn" type="button" class="ghost">取消</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="mentorCardTemplate">
+    <article class="mentor-card">
+      <img class="mentor-photo" alt="">
+      <div class="mentor-main">
+        <div class="mentor-title-row">
+          <h3 class="mentor-name"></h3>
+          <span class="badge"></span>
+        </div>
+        <p class="mentor-meta"></p>
+        <p class="mentor-research"></p>
+        <div class="mentor-actions">
+          <button type="button" class="detail-btn">查看详情</button>
+          <button type="button" class="contact-btn"></button>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

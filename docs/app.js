@@ -183,16 +183,19 @@ function bindChipGroup(container, hiddenInput, extraInput) {
     syncChipGroup(container, hiddenInput, extraInput);
   });
 
-  extraInput.addEventListener("input", () => {
-    syncChipGroup(container, hiddenInput, extraInput);
-  });
+  if (extraInput.type !== "hidden") {
+    extraInput.addEventListener("input", () => {
+      syncChipGroup(container, hiddenInput, extraInput);
+    });
+  }
 
   syncChipGroup(container, hiddenInput, extraInput);
 }
 
 function syncChipGroup(container, hiddenInput, extraInput) {
   const selected = [...container.querySelectorAll(".chip.active")].map((node) => normalizeText(node.dataset.value));
-  const extra = normalizeText(extraInput.value);
+  const canUseExtra = Boolean(extraInput) && extraInput.type !== "hidden";
+  const extra = canUseExtra ? normalizeText(extraInput.value) : "";
 
   let merged = selected.join("、");
   if (extra) {
@@ -935,17 +938,14 @@ function applySavedToChipGroup(rawValue, container, hiddenInput, extraInput) {
   const chipButtons = [...container.querySelectorAll(".chip")];
   const chipValues = new Set(chipButtons.map((node) => normalizeText(node.dataset.value)));
   const parts = value.split(/[、,，;；/]/).map((item) => normalizeText(item)).filter(Boolean);
-  const extras = [];
 
   parts.forEach((part) => {
     if (chipValues.has(part)) {
       const button = chipButtons.find((node) => normalizeText(node.dataset.value) === part);
       if (button) button.classList.add("active");
-    } else {
-      extras.push(part);
     }
   });
 
-  extraInput.value = extras.join("、");
+  extraInput.value = "";
   syncChipGroup(container, hiddenInput, extraInput);
 }

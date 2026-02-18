@@ -4,17 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="湖工大包装设计导师筛选 H5：考研/调剂同学的公益匹配工具。">
-  <title>湖工大包装设计导师筛选 H5</title>
+  <meta name="theme-color" content="#f5f7fb">
+  <title>湖工大包装设计导师筛选</title>
   <link rel="icon" href="photos/mentor-placeholder.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div class="ambient-bg" aria-hidden="true">
+    <span class="ambient-orb orb-a"></span>
+    <span class="ambient-orb orb-b"></span>
+    <span class="ambient-grid"></span>
+  </div>
+
   <header class="site-header">
     <div class="site-brand">
-      <span class="logo-dot"></span>
+      <span class="logo-dot" aria-hidden="true"></span>
       <div>
+        <p class="eyebrow">HUT Mentor Match Lab</p>
         <h1>湖工大包装设计导师筛选</h1>
-        <p>给考研/调剂同学的公益匹配工具</p>
+        <p>为考研 / 调剂同学准备的导师方向匹配工具</p>
       </div>
     </div>
     <p class="header-note">信息来源：<a href="https://art.hut.edu.cn/ljyjx.htm" target="_blank" rel="noopener">学院官网导师介绍 &gt;</a></p>
@@ -23,12 +34,12 @@
   <section class="launch-screen" id="launchScreen" aria-label="启动页">
     <div class="launch-card">
       <p class="launch-badge">公益项目</p>
-      <h2>湖工大包装设计导师筛选</h2>
-      <p class="launch-sub">1 分钟完成学生画像，快速拿到导师优先顺序。</p>
+      <h2>1 分钟完成画像，拿到导师优先顺序</h2>
+      <p class="launch-sub">输入你的方向、技能与职业规划，系统会做隐形匹配评分并给出联系建议。</p>
       <ul class="launch-points">
-        <li>填写目标方向、已掌握技能、职业规划。</li>
-        <li>系统做隐形匹配分析，返回推荐顺序。</li>
-        <li>结果仅供参考，请以学院官方信息为准。</li>
+        <li>支持多选标签，减少填写负担。</li>
+        <li>结果显示 Top 排名与匹配分值。</li>
+        <li>仅作参考，请结合学院官方信息确认。</li>
       </ul>
       <div class="cover-actions">
         <button type="button" class="cover-btn" id="startAppBtn">立即开始</button>
@@ -39,55 +50,73 @@
 
   <main class="app-shell flow-mode app-hidden" id="appMain">
     <section class="panel form-panel" id="formPage" aria-label="学生画像填写">
-      <h2>1. 学生画像</h2>
-      <p class="muted">尽量点选，不用长篇填写。系统会按你的选择在后台完成匹配评分。</p>
+      <div class="panel-intro">
+        <p class="panel-kicker">STEP 1</p>
+        <h2>学生画像</h2>
+        <p class="muted">尽量点选，不用长篇填写。系统会按你的选择在后台完成匹配评分。</p>
+      </div>
 
       <form id="profileForm" novalidate>
-        <label>目标方向（必选，可多选）</label>
-        <div class="chip-row selectable" id="targetDirectionChips">
-          <button type="button" class="chip" data-value="包装设计">包装设计</button>
-          <button type="button" class="chip" data-value="传达与媒体设计">传达与媒体设计</button>
-          <button type="button" class="chip" data-value="产品设计">产品设计</button>
-          <button type="button" class="chip" data-value="环境设计">环境设计</button>
-          <button type="button" class="chip" data-value="设计历史与理论">设计历史与理论</button>
-          <button type="button" class="chip" data-value="智能包装设计与技术">智能包装设计与技术</button>
-          <button type="button" class="chip" data-value="乡村振兴与生态设计">乡村振兴与生态设计</button>
-        </div>
-        <input id="targetDirection" name="targetDirection" type="hidden" required>
-        <input id="targetDirectionExtra" name="targetDirectionExtra" type="text" placeholder="方向补充（可选）">
+        <section class="field-cluster">
+          <header class="field-head">
+            <label>目标方向（必选，可多选）</label>
+            <span class="field-note">优先选 1-3 项核心方向</span>
+          </header>
+          <div class="chip-row selectable" id="targetDirectionChips">
+            <button type="button" class="chip" data-value="包装设计">包装设计</button>
+            <button type="button" class="chip" data-value="传达与媒体设计">传达与媒体设计</button>
+            <button type="button" class="chip" data-value="产品设计">产品设计</button>
+            <button type="button" class="chip" data-value="环境设计">环境设计</button>
+            <button type="button" class="chip" data-value="设计历史与理论">设计历史与理论</button>
+            <button type="button" class="chip" data-value="智能包装设计与技术">智能包装设计与技术</button>
+            <button type="button" class="chip" data-value="乡村振兴与生态设计">乡村振兴与生态设计</button>
+          </div>
+          <input id="targetDirection" name="targetDirection" type="hidden" required>
+          <input id="targetDirectionExtra" name="targetDirectionExtra" type="hidden">
+        </section>
 
-        <label>已掌握技能（必选，可多选）</label>
-        <div class="chip-row selectable" id="currentSkillsChips">
-          <button type="button" class="chip" data-value="品牌策划">品牌策划</button>
-          <button type="button" class="chip" data-value="视觉设计">视觉设计</button>
-          <button type="button" class="chip" data-value="包装结构">包装结构</button>
-          <button type="button" class="chip" data-value="材料工艺">材料工艺</button>
-          <button type="button" class="chip" data-value="交互设计">交互设计</button>
-          <button type="button" class="chip" data-value="用户研究">用户研究</button>
-          <button type="button" class="chip" data-value="产品建模">产品建模</button>
-          <button type="button" class="chip" data-value="动画与影像">动画与影像</button>
-          <button type="button" class="chip" data-value="空间设计">空间设计</button>
-          <button type="button" class="chip" data-value="设计史论">设计史论</button>
-          <button type="button" class="chip" data-value="项目管理">项目管理</button>
-          <button type="button" class="chip" data-value="AI创作工具">AI创作工具</button>
-        </div>
-        <input id="currentSkills" name="currentSkills" type="hidden" required>
-        <input id="currentSkillsExtra" name="currentSkillsExtra" type="text" placeholder="技能补充（可选）">
+        <section class="field-cluster">
+          <header class="field-head">
+            <label>已掌握技能（必选，可多选）</label>
+            <span class="field-note">尽量选择你已可用于作品集的能力</span>
+          </header>
+          <div class="chip-row selectable" id="currentSkillsChips">
+            <button type="button" class="chip" data-value="品牌策划">品牌策划</button>
+            <button type="button" class="chip" data-value="视觉设计">视觉设计</button>
+            <button type="button" class="chip" data-value="包装结构">包装结构</button>
+            <button type="button" class="chip" data-value="材料工艺">材料工艺</button>
+            <button type="button" class="chip" data-value="交互设计">交互设计</button>
+            <button type="button" class="chip" data-value="用户研究">用户研究</button>
+            <button type="button" class="chip" data-value="产品建模">产品建模</button>
+            <button type="button" class="chip" data-value="动画与影像">动画与影像</button>
+            <button type="button" class="chip" data-value="空间设计">空间设计</button>
+            <button type="button" class="chip" data-value="设计史论">设计史论</button>
+            <button type="button" class="chip" data-value="项目管理">项目管理</button>
+            <button type="button" class="chip" data-value="AI创作工具">AI创作工具</button>
+          </div>
+          <input id="currentSkills" name="currentSkills" type="hidden" required>
+          <input id="currentSkillsExtra" name="currentSkillsExtra" type="hidden">
+        </section>
 
-        <label>未来职业规划（必选，可多选）</label>
-        <div class="chip-row selectable" id="careerPlanChips">
-          <button type="button" class="chip" data-value="企业产品设计">企业产品设计</button>
-          <button type="button" class="chip" data-value="品牌与包装设计">品牌与包装设计</button>
-          <button type="button" class="chip" data-value="数字媒体与交互">数字媒体与交互</button>
-          <button type="button" class="chip" data-value="环境与空间设计">环境与空间设计</button>
-          <button type="button" class="chip" data-value="文旅与乡村振兴">文旅与乡村振兴</button>
-          <button type="button" class="chip" data-value="高校/科研机构">高校/科研机构</button>
-          <button type="button" class="chip" data-value="继续攻读博士">继续攻读博士</button>
-          <button type="button" class="chip" data-value="创业与设计服务">创业与设计服务</button>
-          <button type="button" class="chip" data-value="跨学科创新">跨学科创新</button>
-        </div>
-        <input id="careerPlan" name="careerPlan" type="hidden" required>
-        <input id="careerPlanExtra" name="careerPlanExtra" type="text" placeholder="职业规划补充（可选）">
+        <section class="field-cluster">
+          <header class="field-head">
+            <label>未来职业规划（必选，可多选）</label>
+            <span class="field-note">用于权重判断导师培养方向</span>
+          </header>
+          <div class="chip-row selectable" id="careerPlanChips">
+            <button type="button" class="chip" data-value="企业产品设计">企业产品设计</button>
+            <button type="button" class="chip" data-value="品牌与包装设计">品牌与包装设计</button>
+            <button type="button" class="chip" data-value="数字媒体与交互">数字媒体与交互</button>
+            <button type="button" class="chip" data-value="环境与空间设计">环境与空间设计</button>
+            <button type="button" class="chip" data-value="文旅与乡村振兴">文旅与乡村振兴</button>
+            <button type="button" class="chip" data-value="高校/科研机构">高校/科研机构</button>
+            <button type="button" class="chip" data-value="继续攻读博士">继续攻读博士</button>
+            <button type="button" class="chip" data-value="创业与设计服务">创业与设计服务</button>
+            <button type="button" class="chip" data-value="跨学科创新">跨学科创新</button>
+          </div>
+          <input id="careerPlan" name="careerPlan" type="hidden" required>
+          <input id="careerPlanExtra" name="careerPlanExtra" type="hidden">
+        </section>
 
         <label class="checkbox-wrap">
           <input id="privacyConsent" type="checkbox" required>
@@ -106,11 +135,16 @@
       <div class="result-top-actions">
         <button type="button" class="ghost" id="backToFormBtn">返回修改画像</button>
       </div>
-      <div class="result-head">
-        <h2>2. 推荐结果</h2>
-        <div class="result-count" id="resultCount">尚未生成</div>
+
+      <div class="panel-intro">
+        <p class="panel-kicker">STEP 2</p>
+        <div class="result-head">
+          <h2>推荐结果</h2>
+          <div class="result-count" id="resultCount">尚未生成</div>
+        </div>
+        <p class="muted">系统将综合方向、技能和职业规划做匹配分析，优先展示建议联系顺序。</p>
       </div>
-      <p class="muted">系统将综合你的方向、技能和职业规划进行智能匹配分析。</p>
+
       <p class="result-ai-note" id="resultAiNote">先完成学生画像，AI 会生成优先顺序和匹配解读。</p>
 
       <details class="filter-panel">
@@ -121,7 +155,7 @@
             <option value="">全部方向</option>
           </select>
           <label for="keywordFilter">关键词</label>
-          <input id="keywordFilter" type="search" placeholder="按姓名/研究方向搜索">
+          <input id="keywordFilter" type="search" placeholder="按姓名 / 研究方向搜索">
         </div>
       </details>
 
@@ -169,7 +203,12 @@
 
   <section class="analysis-overlay" id="analysisOverlay" aria-label="分析进度" hidden>
     <div class="analysis-card">
-      <p class="analysis-badge">AI 正在为你分析</p>
+      <p class="analysis-badge">AI 正在分析画像</p>
+      <div class="analysis-core" aria-hidden="true">
+        <span class="core-ring ring-a"></span>
+        <span class="core-ring ring-b"></span>
+        <span class="core-dot"></span>
+      </div>
       <p class="analysis-step" id="analysisStepText">准备中...</p>
       <div class="analysis-progress" aria-hidden="true">
         <span id="analysisProgressBar"></span>

@@ -3,13 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="湖工大包装设计导师筛选 H5：考研/调剂同学的公益匹配工具。">
-  <meta name="theme-color" content="#f5f7fb">
-  <title>湖工大包装设计导师筛选</title>
+  <meta name="description" content="湖工大导师筛选 H5：考研/调剂同学的公益匹配工具。">
+  <meta name="theme-color" content="#f5f5f7">
+  <title>湖工大导师筛选</title>
   <link rel="icon" href="photos/mentor-placeholder.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -21,21 +18,34 @@
 
   <header class="site-header">
     <div class="site-brand">
-      <span class="logo-dot" aria-hidden="true"></span>
-      <div>
-        <p class="eyebrow">HUT Mentor Match Lab</p>
-        <h1>湖工大包装设计导师筛选</h1>
-        <p>为考研 / 调剂同学准备的导师方向匹配工具</p>
+      <div class="brand-row">
+        <div class="brand-copy">
+          <p class="eyebrow">AI 辅助匹配 · 学姐经验优先排序</p>
+          <h1>湖工大导师筛选</h1>
+          <p>为考研 / 调剂同学准备的导师方向匹配工具</p>
+          <p class="header-note">信息来源：<a href="https://art.hut.edu.cn/ljyjx.htm" target="_blank" rel="noopener">学院官网导师介绍 &gt;</a></p>
+        </div>
       </div>
     </div>
-    <p class="header-note">信息来源：<a href="https://art.hut.edu.cn/ljyjx.htm" target="_blank" rel="noopener">学院官网导师介绍 &gt;</a></p>
   </header>
 
   <section class="launch-screen" id="launchScreen" aria-label="启动页">
     <div class="launch-card">
-      <p class="launch-badge">公益项目</p>
-      <h2>1 分钟完成画像，拿到导师优先顺序</h2>
-      <p class="launch-sub">输入你的方向、技能与职业规划，系统会做隐形匹配评分并给出联系建议。</p>
+      <p class="launch-badge">学姐经验 + AI 匹配</p>
+      <h2>60秒锁定高匹配导师，联系谁一眼明了</h2>
+      <p class="launch-sub">输入方向与技能，系统立即给出优先联系顺序和匹配分值。</p>
+      <section class="senior-story-strip" aria-label="学姐故事">
+        <p class="story-tag">学姐过来人经验</p>
+        <p class="story-short">这不是冷冰冰的算法，是学姐给师弟师妹做的导师筛选工具。</p>
+        <p class="story-long">她也经历过翻资料到深夜、不知道先联系谁的焦虑，所以把踩坑经验做成了这套“先筛选、再联系”的工具。</p>
+        <div class="story-follow">
+          <div>
+            <p class="story-author">学姐：子木音不离</p>
+            <p class="story-handle">小红书：子木音不离（小红书号 XXXTINGXXX）</p>
+          </div>
+          <button type="button" class="ghost story-copy-btn" id="copyXhsBtn">复制小红书号</button>
+        </div>
+      </section>
       <ul class="launch-points">
         <li>支持多选标签，减少填写负担。</li>
         <li>结果显示 Top 排名与匹配分值。</li>
@@ -51,9 +61,8 @@
   <main class="app-shell flow-mode app-hidden" id="appMain">
     <section class="panel form-panel" id="formPage" aria-label="学生画像填写">
       <div class="panel-intro">
-        <p class="panel-kicker">STEP 1</p>
         <h2>学生画像</h2>
-        <p class="muted">尽量点选，不用长篇填写。系统会按你的选择在后台完成匹配评分。</p>
+        <p class="panel-note">填写内容用于生成经验型优先顺序，不是官方录取结论。</p>
       </div>
 
       <form id="profileForm" novalidate>
@@ -137,15 +146,37 @@
       </div>
 
       <div class="panel-intro">
-        <p class="panel-kicker">STEP 2</p>
         <div class="result-head">
           <h2>推荐结果</h2>
           <div class="result-count" id="resultCount">尚未生成</div>
         </div>
-        <p class="muted">系统将综合方向、技能和职业规划做匹配分析，优先展示建议联系顺序。</p>
       </div>
 
       <p class="result-ai-note" id="resultAiNote">先完成学生画像，AI 会生成优先顺序和匹配解读。</p>
+
+      <section class="focus-mentor-zone" id="focusMentorZone" aria-label="重点推荐导师">
+        <div class="focus-zone-head">
+          <h3>重点推荐导师</h3>
+          <p>建议先查看这两位，再扩展比较其他导师。</p>
+        </div>
+        <div class="focus-mentor-grid" id="focusMentorGrid">
+          <p class="muted">完成画像后显示重点推荐。</p>
+        </div>
+      </section>
+
+      <section class="recommend-reason-card" id="recommendReasonCard" aria-label="推荐理由解释">
+        <h3>推荐理由解释</h3>
+        <p id="recommendReasonText">暂无解释，提交画像后自动生成。</p>
+      </section>
+
+      <section class="alumni-experience-card" id="alumniExperienceCard" aria-label="往届经验摘要">
+        <h3>往届经验摘要</h3>
+        <ul id="alumniExperienceList">
+          <li>先联系、先沟通、再精筛，效率明显更高。</li>
+          <li>邮件不要群发模板化，先看主页后再定制第一封。</li>
+          <li>经验仅供参考，请以学院官网信息为准。</li>
+        </ul>
+      </section>
 
       <details class="filter-panel">
         <summary>筛选条件（可选）</summary>
@@ -167,6 +198,10 @@
       <section class="share-panel" aria-label="转发建议">
         <h3>把它转发给同方向同学</h3>
         <p class="muted">你可能只花了 1 分钟，但能帮同学少走很多弯路。</p>
+        <div class="share-follow">
+          <p class="muted">想看学姐更多经验：小红书搜「子木音不离」或小红书号 XXXTINGXXX。</p>
+          <button type="button" class="ghost share-follow-btn" id="copyXhsBtn2">复制小红书号</button>
+        </div>
         <div class="share-actions">
           <button type="button" id="copyShareBtn">复制分享文案</button>
           <a class="share-link" href="https://art.hut.edu.cn/ljyjx.htm" target="_blank" rel="noopener">信息来源：学院官网导师介绍 &gt;</a>
@@ -213,7 +248,7 @@
       <div class="analysis-progress" aria-hidden="true">
         <span id="analysisProgressBar"></span>
       </div>
-      <p class="analysis-hint">正在匹配导师方向与研究关键词，请稍候。</p>
+      <p class="analysis-hint" id="analysisHintText">过来人提示：先联系、先沟通、再精筛，比一直纠结更有效。</p>
     </div>
   </section>
 

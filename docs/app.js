@@ -105,7 +105,6 @@ const els = {
   keywordFilter: document.getElementById("keywordFilter"),
   mentorList: document.getElementById("mentorList"),
   loadMoreBtn: document.getElementById("loadMoreBtn"),
-  resultCount: document.getElementById("resultCount"),
   resultAiNote: document.getElementById("resultAiNote"),
   focusMentorGrid: document.getElementById("focusMentorGrid"),
   recommendReasonText: document.getElementById("recommendReasonText"),
@@ -218,6 +217,7 @@ function trackEvent(name, payload = {}) {
 }
 
 function showLaunchView() {
+  document.body.classList.remove("in-app");
   if (els.launchScreen) {
     els.launchScreen.hidden = false;
   }
@@ -231,6 +231,7 @@ async function enterApp() {
     from: state.referrerFrom || "direct"
   });
 
+  document.body.classList.add("in-app");
   if (els.launchScreen) {
     els.launchScreen.hidden = true;
   }
@@ -323,9 +324,6 @@ async function loadMentors() {
     state.renderLimit = LIST_BATCH_SIZE;
     fillDirectionFilter();
     applyFilters({ resetRender: true });
-    if (els.resultCount) {
-      els.resultCount.textContent = `导师库 ${state.mentors.length} 位`;
-    }
   } catch (error) {
     state.mentorsReady = false;
     throw error;
@@ -865,14 +863,6 @@ function applyFilters(options = {}) {
   renderMentorList();
   renderInsightBlocks();
   updateResultAiNote();
-
-  if (els.resultCount) {
-    if (state.profile) {
-      els.resultCount.textContent = `推荐 ${list.length} 位（共 ${state.rankedMentors.length}）`;
-    } else {
-      els.resultCount.textContent = `导师库 ${list.length} 位`;
-    }
-  }
 }
 
 function updateResultAiNote() {
@@ -944,17 +934,17 @@ function renderFocusMentorZone() {
               <span class="rank-chip">Top ${index + 1}</span>
               <span class="score-chip${scoreClass ? ` ${scoreClass}` : ""}">${scoreText}</span>
             </div>
-          </div>
-          <p class="focus-meta">${mentorMeta}</p>
-        </div>
-      </div>
-      <p class="focus-research">${mentorResearch}</p>
-      <div class="focus-actions">
-        <button type="button" class="focus-btn" data-action="profile">查看主页</button>
-        <button type="button" class="focus-btn ghost" data-action="email">复制邮箱</button>
-        <button type="button" class="focus-btn ghost" data-action="template">复制首封邮件模板</button>
-      </div>
-    `;
+           </div>
+           <p class="focus-meta">${mentorMeta}</p>
+           <p class="focus-research">${mentorResearch}</p>
+         </div>
+       </div>
+       <div class="focus-actions">
+         <button type="button" class="focus-btn" data-action="profile">查看主页</button>
+         <button type="button" class="focus-btn ghost" data-action="email">复制邮箱</button>
+         <button type="button" class="focus-btn ghost" data-action="template">复制首封邮件模板</button>
+       </div>
+     `;
 
     const profileBtn = card.querySelector('[data-action="profile"]');
     const emailBtn = card.querySelector('[data-action="email"]');

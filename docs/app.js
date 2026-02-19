@@ -927,7 +927,8 @@ function renderFocusMentorZone() {
     card.setAttribute("aria-label", `查看 ${normalizeText(mentor.name)} 导师详情`);
 
     const score = mentor.displayScore ?? Math.round(mentor.hiddenScore || 0);
-    const scoreText = state.profile ? `${score}%` : "待生成";
+    const scoreText = state.profile ? `匹配值 ${score}%` : "待匹配";
+    const scoreClass = state.profile ? resolveScoreClass(score) : "";
     const mentorName = escapeHtml(mentor.name);
     const mentorMeta = escapeHtml(`${mentor.direction}·${mentor.title}`);
     const mentorResearch = escapeHtml(mentor.researchAreas || "研究方向待补充");
@@ -939,8 +940,10 @@ function renderFocusMentorZone() {
         <div class="focus-info">
           <div class="focus-title-row">
             <h4>${mentorName}</h4>
-            <p class="focus-rank-tag">Top${index + 1}</p>
-            <p class="focus-match-tag">匹配值 ${scoreText}</p>
+            <div class="mentor-badges">
+              <span class="rank-chip">Top ${index + 1}</span>
+              <span class="score-chip${scoreClass ? ` ${scoreClass}` : ""}">${scoreText}</span>
+            </div>
           </div>
           <p class="focus-meta">${mentorMeta}</p>
         </div>
@@ -1081,7 +1084,7 @@ function renderMentorList() {
 
     const roundedScore = displayScoreMap.get(mentorKey(mentor)) ?? Math.round(mentor.hiddenScore || 0);
     if (state.profile) {
-      scoreChip.textContent = `匹配 ${roundedScore}%`;
+      scoreChip.textContent = `匹配值 ${roundedScore}%`;
       scoreChip.classList.add(resolveScoreClass(roundedScore));
     } else {
       scoreChip.textContent = "待匹配";

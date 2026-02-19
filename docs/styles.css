@@ -783,9 +783,14 @@ select:focus {
 
 .focus-title-row {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
+  flex-wrap: wrap;
+}
+
+.focus-title-row .mentor-badges {
+  margin-left: auto;
 }
 
 .focus-mentor-card::before {
@@ -845,7 +850,11 @@ select:focus {
   font-size: 1.18rem;
   font-weight: 800;
   letter-spacing: -0.01em;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   line-height: 1.16;
 }
 

@@ -70,12 +70,15 @@ const ANALYSIS_HINTS = [
   "提示：仅供参考，请以学院官网信息为准。"
 ];
 
+const ALUMNI_DIRECTION_POLICY_TIP = "匿名经验：2025届选导师按报考方向分组，联系前先确认报考方向与导师方向一致；2026届是否延续暂不确定，请以当年学院通知为准。";
+
 const ALUMNI_EXPERIENCE_LIBRARY = [
   "匿名经验：先联系、先沟通、再精筛，效率明显更高。",
   "匿名经验：邮件不要群发模板化，先看官网主页再定制首封更稳。",
   "匿名经验：先找方向最接近的导师沟通，再补充作品集细节。",
   "匿名经验：先完成 1 封高质量首封邮件，比一次性海投更有效。",
-  "匿名经验：经验仅供参考，最终请以学院官网信息核验。"
+  "匿名经验：经验仅供参考，最终请以学院官网信息核验。",
+  ALUMNI_DIRECTION_POLICY_TIP
 ];
 
 const DIRECTION_KEYWORDS = {
@@ -1099,15 +1102,22 @@ function renderAlumniExperienceTips() {
 }
 
 function pickAlumniExperienceTips() {
-  if (ALUMNI_EXPERIENCE_LIBRARY.length <= 3) return [...ALUMNI_EXPERIENCE_LIBRARY];
+  const tipPool = ALUMNI_EXPERIENCE_LIBRARY.filter((tip) => tip !== ALUMNI_DIRECTION_POLICY_TIP);
+  const randomPickCount = 3;
+
+  if (tipPool.length <= randomPickCount) {
+    return [...tipPool, ALUMNI_DIRECTION_POLICY_TIP];
+  }
+
   const seedText = state.profile
     ? `${state.profile.targetDirection}|${state.profile.currentSkills}|${state.profile.careerPlan}`
     : "default";
-  const start = hashSeed(seedText) % ALUMNI_EXPERIENCE_LIBRARY.length;
+  const start = hashSeed(seedText) % tipPool.length;
   const picks = [];
-  for (let index = 0; index < 3; index += 1) {
-    picks.push(ALUMNI_EXPERIENCE_LIBRARY[(start + index) % ALUMNI_EXPERIENCE_LIBRARY.length]);
+  for (let index = 0; index < randomPickCount; index += 1) {
+    picks.push(tipPool[(start + index) % tipPool.length]);
   }
+  picks.push(ALUMNI_DIRECTION_POLICY_TIP);
   return picks;
 }
 

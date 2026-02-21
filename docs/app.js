@@ -57,17 +57,16 @@ const INDUSTRIAL_PRIORITY_KEYWORDS = [
 ];
 
 const ANALYSIS_STEPS = [
-  "学姐经验库校准中：先识别你的方向倾向...",
-  "学姐经验库校准中：匹配你已掌握的技能...",
-  "学姐经验库校准中：推演你更适合先联系谁...",
-  "推荐结论已生成，请优先查看重点导师。"
+  "方向匹配中",
+  "技能匹配中",
+  "联系优先级生成中",
+  "推荐结果已生成"
 ];
 
 const ANALYSIS_HINTS = [
-  "过来人提示：先联系、先沟通、再精筛，比一直纠结更有效。",
-  "过来人提示：先看老师主页再写首封，命中率更高。",
-  "过来人提示：首封别群发模板化，3 句话也要写出针对性。",
-  "提示：仅供参考，请以学院官网信息为准。"
+  "先看主页再写首封 命中更高",
+  "先联系先沟通再筛选",
+  "首封写针对性更有效"
 ];
 
 const ALUMNI_DIRECTION_POLICY_TIP = "匿名经验：2025届选导师按报考方向分组，联系前先确认报考方向与导师方向一致；2026届是否延续暂不确定，请以当年学院通知为准。";
@@ -565,13 +564,17 @@ function validateProfile(profile, consent) {
 async function playAnalysisAnimation() {
   showAnalysisOverlay();
   els.formMsg.style.color = "#2c5e4c";
+  let hintIndex = 0;
   for (let index = 0; index < ANALYSIS_STEPS.length; index += 1) {
     const step = ANALYSIS_STEPS[index];
     const progress = Math.round(((index + 1) / ANALYSIS_STEPS.length) * 100);
     setAnalysisStep(step, progress);
-    setAnalysisHint(ANALYSIS_HINTS[index] || ANALYSIS_HINTS[ANALYSIS_HINTS.length - 1] || "");
+    if (index > 0 && index % 2 === 0 && hintIndex < ANALYSIS_HINTS.length - 1) {
+      hintIndex += 1;
+      setAnalysisHint(ANALYSIS_HINTS[hintIndex]);
+    }
     els.formMsg.textContent = step;
-    await delay(420);
+    await delay(620);
   }
   await delay(160);
 }

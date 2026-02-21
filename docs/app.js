@@ -11,7 +11,42 @@ const LIST_BATCH_SIZE = 12;
 const SHARE_FROM_PARAM = "share_copy";
 const SENIOR_PROFILE = Object.freeze({
   name: "子木音不离",
-  xhsId: "XXXTINGXXX"
+  xhsId: "XXXTINGXXX",
+  xhsUrl: "https://xhslink.com/m/92nbiGWmQvj"
+});
+
+const DIRECTION_ROUTE_LABELS = Object.freeze({
+  product: "产品设计",
+  packaging: "包装设计",
+  media: "传达与媒体设计",
+  environment: "环境设计"
+});
+
+const DIRECTION_ROUTE_KEYWORDS = Object.freeze({
+  product: ["产品", "工业", "交互", "用户体验", "服务设计", "硬件", "制造", "企业产品"],
+  packaging: ["包装", "品牌", "文创", "智能包装", "包装结构", "材料工艺", "设计历史与理论"],
+  media: ["传达", "媒体", "视觉", "动画", "影像", "新媒体", "数字媒体"],
+  environment: ["环境", "环艺", "空间", "景观", "建筑", "城乡", "文旅", "乡村", "低碳", "生态"]
+});
+
+const MENTOR_EXTRA_LINKS = Object.freeze({
+  [PRIORITY_MENTOR_NAMES.tian]: Object.freeze({
+    links: Object.freeze([
+      Object.freeze({ label: "小红书主页", url: "https://xhslink.com/m/3NdgyD9DdSh" }),
+      Object.freeze({ label: "个人网站", url: "http://tianfei.chat" })
+    ]),
+    news: Object.freeze([
+      Object.freeze({ label: "重要文章：3小时，AI带我开发出一个APP", url: "https://tianfei.chat/article/build-app-3hours-with-ai/" }),
+      Object.freeze({ label: "重要文章：移动产品注册的交互设计思考", url: "https://tianfei.chat/article/mobile-signup-ux-design/" }),
+      Object.freeze({ label: "重要文章：产品的用户、客户与粉丝", url: "https://tianfei.chat/article/users-customers-fans-difference/" })
+    ])
+  }),
+  [PRIORITY_MENTOR_NAMES.he]: Object.freeze({
+    links: Object.freeze([
+      Object.freeze({ label: "小红书主页", url: "https://xhslink.com/m/1Q4wXVRAoxz" })
+    ]),
+    news: Object.freeze([])
+  })
 });
 
 const INTERACTION_PRIORITY_KEYWORDS = [
@@ -565,7 +600,7 @@ function rankMentors(profile) {
       total += 20 + Math.min(6, priorityDecision.top1HitCount * 2);
     } else if (name === priorityDecision.top2Name) {
       total += 13 + Math.min(4, priorityDecision.top2HitCount * 1.5);
-    } else if (isPriorityMentor(mentor)) {
+    } else if (priorityDecision.priorityMentorBoost && isPriorityMentor(mentor)) {
       total += 6;
     }
 
@@ -596,6 +631,31 @@ function resolvePriorityDecision(profile) {
     currentSkills: profile.currentSkills || "",
     careerPlan: profile.careerPlan || ""
   };
+  const route = resolvePrimaryDirectionRoute(textByField.targetDirection);
+
+  if (route !== "product") {
+    const primaryDirection = DIRECTION_ROUTE_LABELS[route];
+    const pickedNames = pickDirectionPriorityNames(primaryDirection, profile);
+    const top1Name = pickedNames[0] || "";
+    const top2Name = pickedNames[1] || "";
+    const pickedLabel = [top1Name, top2Name].filter(Boolean).join("、");
+
+    return {
+      top1Name,
+      top2Name,
+      top1HitCount: top1Name ? 1 : 0,
+      top2HitCount: top2Name ? 1 : 0,
+      reasonType: `${route}_random`,
+      primaryDirection,
+      priorityMentorBoost: false,
+      tianStrength: 0,
+      heStrength: 0,
+      reasonText: pickedLabel
+        ? `你的目标方向是${primaryDirection}，已在该方向随机推荐导师（${pickedLabel}），建议先联系再精筛。`
+        : `你的目标方向是${primaryDirection}，已切换为同方向优先推荐，请结合官网信息筛选导师。`
+    };
+  }
+
   const tianHits = collectPriorityHits(textByField, INTERACTION_PRIORITY_KEYWORDS);
   const heHits = collectPriorityHits(textByField, INDUSTRIAL_PRIORITY_KEYWORDS);
   // Skills/career often reflect "真实作品集能力/未来去向" more than a broad direction label.
@@ -658,10 +718,45 @@ function resolvePriorityDecision(profile) {
     top1HitCount,
     top2HitCount,
     reasonType,
+    primaryDirection: DIRECTION_ROUTE_LABELS.product,
+    priorityMentorBoost: true,
     tianStrength,
     heStrength,
     reasonText: buildPriorityReasonText(reasonType, tianHits, heHits)
   };
+}
+
+function resolvePrimaryDirectionRoute(targetDirectionText) {
+  const text = normalizeText(targetDirectionText);
+  if (!text) return "product";
+
+  if (containsAny(text, ["产品设计", "产品", "工业"])) return "product";
+  if (containsAny(text, ["包装设计", "包装", "智能包装设计与技术", "设计历史与理论"])) return "packaging";
+  if (containsAny(text, ["传达与媒体设计", "传达", "媒体"])) return "media";
+  if (containsAny(text, ["环境设计", "环艺", "环境", "乡村振兴与生态设计"])) return "environment";
+
+  const routeScores = Object.entries(DIRECTION_ROUTE_KEYWORDS).map(([route, keywords]) => ({
+    route,
+    score: findMatchedKeywords(text, keywords).length
+  }));
+  routeScores.sort((a, b) => b.score - a.score);
+  return routeScores[0]?.score > 0 ? routeScores[0].route : "product";
+}
+
+function pickDirectionPriorityNames(direction, profile) {
+  const mentorsInDirection = state.mentors
+    .filter((mentor) => normalizeText(mentor.direction) === direction)
+    .sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
+
+  if (!mentorsInDirection.length) return [];
+  if (mentorsInDirection.length <= 2) {
+    return mentorsInDirection.map((mentor) => normalizeMentorName(mentor.name));
+  }
+
+  const seedText = `${direction}|${profile.targetDirection || ""}|${profile.currentSkills || ""}|${profile.careerPlan || ""}`;
+  const start = hashSeed(seedText) % mentorsInDirection.length;
+  const rotated = [...mentorsInDirection.slice(start), ...mentorsInDirection.slice(0, start)];
+  return rotated.slice(0, 2).map((mentor) => normalizeMentorName(mentor.name));
 }
 
 function collectPriorityHits(textByField, keywords) {
@@ -875,15 +970,16 @@ function updateResultAiNote() {
 
   const focusMentors = state.activeFocusMentors.length ? state.activeFocusMentors : state.visibleMentors.slice(0, 2);
   const focusNames = focusMentors.map((mentor) => mentor?.name).filter(Boolean).join("、");
+  const fallbackFocusNames = resolveFallbackFocusNames();
   const topScore = focusMentors[0]?.displayScore ?? Math.round(focusMentors[0]?.hiddenScore || 0);
 
   if (!state.visibleMentors.length) {
-    els.resultAiNote.textContent = `推荐结论已生成，当前筛选下暂无结果。建议先看重点导师：${focusNames || "田飞、何铭锋"}。`;
+    els.resultAiNote.textContent = `推荐结论已生成，当前筛选下暂无结果。建议先看重点导师：${focusNames || fallbackFocusNames}。`;
     return;
   }
 
   const scoreText = Number.isFinite(topScore) && topScore > 0 ? `（Top1 经验型匹配值 ${topScore}%）` : "";
-  els.resultAiNote.textContent = `推荐结论已生成，请优先查看重点导师：${focusNames || "田飞、何铭锋"}${scoreText}。`;
+  els.resultAiNote.textContent = `推荐结论已生成，请优先查看重点导师：${focusNames || fallbackFocusNames}${scoreText}。`;
 }
 
 function renderInsightBlocks() {
@@ -896,9 +992,12 @@ function renderFocusMentorZone() {
   if (!els.focusMentorGrid) return;
   els.focusMentorGrid.innerHTML = "";
 
+  const fallbackNames = state.priorityDecision
+    ? [state.priorityDecision.top1Name, state.priorityDecision.top2Name].filter(Boolean)
+    : [PRIORITY_MENTOR_NAMES.tian, PRIORITY_MENTOR_NAMES.he];
   const focusMentors = state.activeFocusMentors.length
     ? state.activeFocusMentors
-    : [resolveMentorByName(PRIORITY_MENTOR_NAMES.tian), resolveMentorByName(PRIORITY_MENTOR_NAMES.he)].filter(Boolean);
+    : fallbackNames.map((name) => resolveMentorByName(name)).filter(Boolean);
 
   if (!focusMentors.length) {
     const empty = document.createElement("p");
@@ -934,17 +1033,17 @@ function renderFocusMentorZone() {
               <span class="rank-chip">Top ${index + 1}</span>
               <span class="score-chip${scoreClass ? ` ${scoreClass}` : ""}">${scoreText}</span>
             </div>
-           </div>
-           <p class="focus-meta">${mentorMeta}</p>
-           <p class="focus-research">${mentorResearch}</p>
-         </div>
-       </div>
-       <div class="focus-actions">
-         <button type="button" class="focus-btn" data-action="profile">查看主页</button>
-         <button type="button" class="focus-btn ghost" data-action="email">复制邮箱</button>
-         <button type="button" class="focus-btn ghost" data-action="template">复制首封邮件模板</button>
-       </div>
-     `;
+          </div>
+          <p class="focus-meta">${mentorMeta}</p>
+          <p class="focus-research">${mentorResearch}</p>
+        </div>
+      </div>
+      <div class="focus-actions">
+        <button type="button" class="focus-btn" data-action="profile">查看主页</button>
+        <button type="button" class="focus-btn ghost" data-action="email">复制邮箱</button>
+        <button type="button" class="focus-btn ghost" data-action="template">复制首封邮件模板</button>
+      </div>
+    `;
 
     const profileBtn = card.querySelector('[data-action="profile"]');
     const emailBtn = card.querySelector('[data-action="email"]');
@@ -975,6 +1074,14 @@ function renderFocusMentorZone() {
 
     els.focusMentorGrid.appendChild(card);
   });
+}
+
+function resolveFallbackFocusNames() {
+  const names = state.priorityDecision
+    ? [state.priorityDecision.top1Name, state.priorityDecision.top2Name].filter(Boolean)
+    : [];
+  if (names.length) return names.join("、");
+  return `${PRIORITY_MENTOR_NAMES.tian}、${PRIORITY_MENTOR_NAMES.he}`;
 }
 
 function renderRecommendReasonCard() {
@@ -1150,6 +1257,7 @@ function openDetail(mentor) {
   const safeResearch = escapeHtml(mentor.researchAreas || "待补充");
   const safeNotes = escapeHtml(mentor.notes || "待补充");
   const safePhotoPath = escapeHtml(mentor.photoPath || DEFAULT_PHOTO_PATH);
+  const extraResourceBlocks = buildExtraResourceBlocks(mentor.name);
 
   els.detailContent.innerHTML = `
     <div class="detail-head">
@@ -1175,6 +1283,7 @@ function openDetail(mentor) {
       <h4>简介</h4>
       <p>${safeNotes}</p>
     </div>
+    ${extraResourceBlocks}
     <div class="detail-block detail-action-block">
       <h4>学姐建议动作</h4>
       <ol class="detail-action-list">
@@ -1210,6 +1319,45 @@ function openDetail(mentor) {
   }
 
   els.detailDrawer.hidden = false;
+}
+
+function buildExtraResourceBlocks(mentorName) {
+  const resources = resolveMentorExternalResources(mentorName);
+  const blocks = [];
+
+  if (resources.links.length) {
+    blocks.push(buildResourceBlock("扩展链接", resources.links));
+  }
+  if (resources.news.length) {
+    blocks.push(buildResourceBlock("重要文章", resources.news));
+  }
+
+  return blocks.join("");
+}
+
+function buildResourceBlock(title, links) {
+  const listHtml = links
+    .map((item) => `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.label)} &gt;</a></li>`)
+    .join("");
+
+  return `
+    <div class="detail-block">
+      <h4>${escapeHtml(title)}</h4>
+      <ul class="detail-link-list">${listHtml}</ul>
+    </div>
+  `;
+}
+
+function resolveMentorExternalResources(mentorName) {
+  const raw = MENTOR_EXTRA_LINKS[normalizeMentorName(mentorName)] || { links: [], news: [] };
+  const normalizeItems = (items) => items
+    .map((item) => ({ label: normalizeText(item.label), url: safeExternalUrl(item.url) }))
+    .filter((item) => item.label && item.url);
+
+  return {
+    links: normalizeItems(raw.links || []),
+    news: normalizeItems(raw.news || [])
+  };
 }
 
 function closeDetail() {
@@ -1321,7 +1469,7 @@ async function onCopyXhs() {
   const text = buildXhsCopyText();
   try {
     await copyText(text);
-    showTempMessage("学姐小红书号已复制，去小红书搜索即可。", true);
+    showTempMessage("学姐小红书链接已复制，可直接打开。", true);
     trackEvent("xhs_copy", {
       xhsId: SENIOR_PROFILE.xhsId
     });
@@ -1334,7 +1482,7 @@ async function onCopyXhs() {
 }
 
 function buildXhsCopyText() {
-  return SENIOR_PROFILE.xhsId;
+  return `${SENIOR_PROFILE.name}：${SENIOR_PROFILE.xhsUrl}`;
 }
 
 function buildShareMessage() {
@@ -1348,7 +1496,7 @@ function buildShareMessage() {
     `我的方向是「${target}」，结论里还有推荐理由和首封邮件模板。`,
     "她当年也被“选导师”折磨过，所以把踩坑经验做成了这个工具。",
     `同方向同学也测一下：${shareUrl}`,
-    `学姐小红书：${SENIOR_PROFILE.name}（小红书号 ${SENIOR_PROFILE.xhsId}）`,
+    `学姐小红书：${SENIOR_PROFILE.xhsUrl}`,
     `仅供参考，以学院官网为准：${SOURCE_URL}`
   ].filter(Boolean).join("\n");
 }

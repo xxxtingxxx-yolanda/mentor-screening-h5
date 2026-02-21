@@ -333,6 +333,12 @@ body.in-app .app-shell {
   font-size: 0.88rem;
 }
 
+.story-handle a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+
 .story-copy-btn {
   padding: 9px 14px;
   border-radius: 999px;
@@ -1181,6 +1187,12 @@ select:focus {
   font-size: 0.86rem;
 }
 
+.share-link-inline {
+  color: var(--accent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
 .share-link {
   color: var(--accent);
   text-decoration-thickness: 1.5px;
@@ -1188,6 +1200,8 @@ select:focus {
 }
 
 @media (hover: hover) {
+  .story-handle a:hover,
+  .share-link-inline:hover,
   .share-link:hover {
     color: var(--accent-strong);
   }
@@ -1292,6 +1306,25 @@ select:focus {
   margin: 0;
   color: var(--ink-soft);
   line-height: 1.68;
+}
+
+.detail-link-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.detail-link-list a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+
+@media (hover: hover) {
+  .detail-link-list a:hover {
+    color: var(--accent-strong);
+  }
 }
 
 .detail-inline-actions {

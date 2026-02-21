@@ -235,7 +235,7 @@ body.in-app .app-shell {
   min-height: 0;
   align-content: start;
   gap: 15px;
-  padding-top: calc(var(--shell-pad) + 24px);
+  padding-top: calc(var(--shell-pad) + 32px);
 }
 
 .hero-title {
@@ -261,16 +261,16 @@ body.in-app .app-shell {
   right: 14px;
   margin: 0;
   width: fit-content;
-  max-width: min(70vw, 320px);
-  padding: 6px 12px;
+  max-width: min(62vw, 280px);
+  padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid rgba(0, 113, 227, 0.22);
   background: rgba(0, 113, 227, 0.1);
   color: var(--accent);
   font-family: var(--body-font);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .hero-support {
@@ -350,7 +350,7 @@ body.in-app .app-shell {
 }
 
 .story-short {
-  margin: 8px 0 4px;
+  margin: 8px 0 2px;
   color: var(--ink);
   font-weight: 700;
   line-height: 1.45;
@@ -1704,6 +1704,10 @@ select:focus {
     border-radius: 24px;
   }
 
+  .launch-hero-card {
+    padding-top: 52px;
+  }
+
   .launch-trust {
     padding: 18px 16px;
     border-radius: 24px;
@@ -1726,11 +1730,11 @@ select:focus {
   }
 
   .hero-corner-badge {
-    top: 12px;
+    top: 10px;
     right: 12px;
-    max-width: 70vw;
-    font-size: 0.72rem;
-    padding: 5px 10px;
+    max-width: 58vw;
+    font-size: 0.64rem;
+    padding: 4px 8px;
   }
 
   .launch-trust h3 {

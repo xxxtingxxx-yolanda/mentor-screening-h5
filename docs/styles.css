@@ -213,6 +213,7 @@ body.in-app .app-shell {
 .launch-screen {
   display: grid;
   gap: 14px;
+  margin-top: 26px;
   margin-bottom: 18px;
 }
 
@@ -231,9 +232,31 @@ body.in-app .app-shell {
 }
 
 .launch-hero-card {
-  min-height: min(88vh, 620px);
-  align-content: center;
-  gap: 18px;
+  min-height: 0;
+  align-content: start;
+  gap: 14px;
+}
+
+.hero-top {
+  display: grid;
+  gap: 4px;
+  max-width: 60ch;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.hero-title {
+  margin: 2px 0 4px;
+  font-family: var(--display-font);
+  font-size: clamp(1.56rem, 3.2vw, 2.28rem);
+  line-height: 1.1;
+  font-weight: 800;
+}
+
+.hero-brief {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
 }
 
 .launch-card::after {
@@ -1688,10 +1711,6 @@ select:focus {
     border-radius: 24px;
   }
 
-  .launch-hero-card {
-    min-height: min(74vh, 560px);
-  }
-
   .launch-trust {
     padding: 18px 16px;
     border-radius: 24px;
@@ -1702,7 +1721,7 @@ select:focus {
     letter-spacing: 0.06em;
   }
 
-  .site-header h1 {
+  .hero-title {
     font-size: clamp(1.32rem, 6.9vw, 1.78rem);
     line-height: 1.16;
   }

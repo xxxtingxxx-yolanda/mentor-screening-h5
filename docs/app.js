@@ -982,7 +982,7 @@ function renderFocusMentorZone() {
         </div>
       </div>
       <div class="focus-actions">
-        <button type="button" class="focus-btn" data-action="profile">查看主页</button>
+        <button type="button" class="focus-btn" data-action="profile">查看详情</button>
         <button type="button" class="focus-btn ghost" data-action="email">复制邮箱</button>
         <button type="button" class="focus-btn ghost" data-action="template">复制首封邮件模板</button>
       </div>

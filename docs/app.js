@@ -998,7 +998,10 @@ function renderFocusMentorZone() {
       photo.src = DEFAULT_PHOTO_PATH;
     }, { once: true });
 
-    profileBtn?.addEventListener("click", () => openMentorProfile(mentor));
+    profileBtn?.addEventListener("click", () => {
+      trackEvent("focus_profile_to_detail", { mentorName: mentor.name });
+      openDetail(mentor);
+    });
     emailBtn?.addEventListener("click", () => copyEmail(mentor.email, mentor.name));
     templateBtn?.addEventListener("click", () => copyFirstContactTemplate(mentor));
 

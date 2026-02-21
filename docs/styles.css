@@ -339,12 +339,6 @@ body.in-app .app-shell {
   text-decoration-thickness: 1.5px;
 }
 
-.story-copy-btn {
-  padding: 9px 14px;
-  border-radius: 999px;
-  font-size: 0.86rem;
-}
-
 .launch-points {
   margin: 0;
   padding-left: 18px;
@@ -1179,12 +1173,6 @@ select:focus {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-}
-
-.share-follow-btn {
-  padding: 9px 14px;
-  border-radius: 999px;
-  font-size: 0.86rem;
 }
 
 .share-link-inline {

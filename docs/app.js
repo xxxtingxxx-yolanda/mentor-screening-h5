@@ -11,7 +11,6 @@ const LIST_BATCH_SIZE = 12;
 const SHARE_FROM_PARAM = "share_copy";
 const SENIOR_PROFILE = Object.freeze({
   name: "子木音不离",
-  xhsId: "XXXTINGXXX",
   xhsUrl: "https://xhslink.com/m/92nbiGWmQvj"
 });
 
@@ -134,8 +133,6 @@ const els = {
   resetBtn: document.getElementById("resetBtn"),
   formMsg: document.getElementById("formMsg"),
   copyShareBtn: document.getElementById("copyShareBtn"),
-  copyXhsBtn: document.getElementById("copyXhsBtn"),
-  copyXhsBtn2: document.getElementById("copyXhsBtn2"),
   directionFilter: document.getElementById("directionFilter"),
   keywordFilter: document.getElementById("keywordFilter"),
   mentorList: document.getElementById("mentorList"),
@@ -177,12 +174,6 @@ function bindEvents() {
   els.resetBtn.addEventListener("click", onReset);
   if (els.copyShareBtn) {
     els.copyShareBtn.addEventListener("click", onCopyShare);
-  }
-  if (els.copyXhsBtn) {
-    els.copyXhsBtn.addEventListener("click", onCopyXhs);
-  }
-  if (els.copyXhsBtn2) {
-    els.copyXhsBtn2.addEventListener("click", onCopyXhs);
   }
   if (els.directionFilter) {
     els.directionFilter.addEventListener("change", () => applyFilters({ resetRender: true }));
@@ -1463,26 +1454,6 @@ async function onCopyShare() {
     showTempMessage("复制失败，请稍后再试。", false);
     trackEvent("share_copy_fail");
   }
-}
-
-async function onCopyXhs() {
-  const text = buildXhsCopyText();
-  try {
-    await copyText(text);
-    showTempMessage("学姐小红书链接已复制，可直接打开。", true);
-    trackEvent("xhs_copy", {
-      xhsId: SENIOR_PROFILE.xhsId
-    });
-  } catch (_) {
-    showTempMessage("复制失败，请稍后再试。", false);
-    trackEvent("xhs_copy_fail", {
-      xhsId: SENIOR_PROFILE.xhsId
-    });
-  }
-}
-
-function buildXhsCopyText() {
-  return `${SENIOR_PROFILE.name}：${SENIOR_PROFILE.xhsUrl}`;
 }
 
 function buildShareMessage() {

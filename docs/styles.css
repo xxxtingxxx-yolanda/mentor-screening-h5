@@ -1715,8 +1715,8 @@ select:focus {
   }
 
   .hero-title {
-    font-size: clamp(1.22rem, 5.8vw, 1.56rem);
-    line-height: 1.16;
+    font-size: clamp(1.34rem, 6.6vw, 1.72rem);
+    line-height: 1.14;
   }
 
   .hero-title span {

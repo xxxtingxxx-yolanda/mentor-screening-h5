@@ -255,22 +255,29 @@ body.in-app .app-shell {
   white-space: nowrap;
 }
 
+.hero-corner-badge,
+.story-tag {
+  margin: 0;
+  width: fit-content;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border-width: 1px;
+  border-style: solid;
+  font-family: var(--body-font);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.22;
+}
+
 .hero-corner-badge {
   position: absolute;
   top: 14px;
   right: 14px;
-  margin: 0;
-  width: fit-content;
   max-width: min(62vw, 280px);
-  padding: 4px 10px;
-  border-radius: 999px;
   border: 1px solid rgba(0, 113, 227, 0.22);
   background: rgba(0, 113, 227, 0.1);
   color: var(--accent);
-  font-family: var(--body-font);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
 }
 
 .hero-meta {
@@ -329,16 +336,9 @@ body.in-app .app-shell {
   top: 20px;
   right: 18px;
   z-index: 2;
-  margin: 0;
-  padding: 4px 10px;
-  border-radius: 999px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   background: rgba(0, 0, 0, 0.035);
   color: var(--ink-soft);
-  font-family: var(--body-font);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
 }
 
 .story-short {
@@ -1729,8 +1729,6 @@ select:focus {
     top: 10px;
     right: 12px;
     max-width: 58vw;
-    font-size: 0.64rem;
-    padding: 4px 8px;
   }
 
   .launch-trust h3 {
@@ -1740,7 +1738,13 @@ select:focus {
   .story-tag {
     top: 16px;
     right: 12px;
-    font-size: 0.72rem;
+  }
+
+  .hero-corner-badge,
+  .story-tag {
+    font-size: 0.7rem;
+    padding: 5px 10px;
+    letter-spacing: 0.01em;
   }
 
   .panel {

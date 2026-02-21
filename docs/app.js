@@ -652,71 +652,23 @@ function resolvePriorityDecision(profile) {
 
   const tianHits = collectPriorityHits(textByField, INTERACTION_PRIORITY_KEYWORDS);
   const heHits = collectPriorityHits(textByField, INDUSTRIAL_PRIORITY_KEYWORDS);
-  // Skills/career often reflect "真实作品集能力/未来去向" more than a broad direction label.
   const tianStrength = tianHits.target + tianHits.skills * 2 + tianHits.career * 2;
   const heStrength = heHits.target + heHits.skills * 2 + heHits.career * 2;
-  const strengthGap = tianStrength - heStrength;
+  const reasonType = tianHits.total === 0 && heHits.total === 0
+    ? "product_general_fixed"
+    : (tianHits.total >= heHits.total ? "product_interaction_fixed" : "product_industrial_fixed");
 
-  let top1Name = PRIORITY_MENTOR_NAMES.tian;
-  let top2Name = PRIORITY_MENTOR_NAMES.he;
-  let reasonType = "general";
-
-  if (tianHits.total === 0 && heHits.total === 0) {
-    reasonType = "general";
-  } else if (tianHits.total > 0 && heHits.total === 0) {
-    top1Name = PRIORITY_MENTOR_NAMES.tian;
-    top2Name = PRIORITY_MENTOR_NAMES.he;
-    reasonType = "interaction";
-  } else if (heHits.total > 0 && tianHits.total === 0) {
-    top1Name = PRIORITY_MENTOR_NAMES.he;
-    top2Name = PRIORITY_MENTOR_NAMES.tian;
-    reasonType = "industrial";
-  } else {
-    if (strengthGap >= 2) {
-      top1Name = PRIORITY_MENTOR_NAMES.tian;
-      top2Name = PRIORITY_MENTOR_NAMES.he;
-      reasonType = "interaction";
-    } else if (strengthGap <= -2) {
-      top1Name = PRIORITY_MENTOR_NAMES.he;
-      top2Name = PRIORITY_MENTOR_NAMES.tian;
-      reasonType = "industrial";
-    } else {
-      reasonType = "mixed";
-      if (strengthGap > 0) {
-        top1Name = PRIORITY_MENTOR_NAMES.tian;
-        top2Name = PRIORITY_MENTOR_NAMES.he;
-      } else if (strengthGap < 0) {
-        top1Name = PRIORITY_MENTOR_NAMES.he;
-        top2Name = PRIORITY_MENTOR_NAMES.tian;
-      } else if (heHits.target > tianHits.target) {
-        top1Name = PRIORITY_MENTOR_NAMES.he;
-        top2Name = PRIORITY_MENTOR_NAMES.tian;
-      } else if (tianHits.target > heHits.target) {
-        top1Name = PRIORITY_MENTOR_NAMES.tian;
-        top2Name = PRIORITY_MENTOR_NAMES.he;
-      } else if (heHits.total > tianHits.total) {
-        top1Name = PRIORITY_MENTOR_NAMES.he;
-        top2Name = PRIORITY_MENTOR_NAMES.tian;
-      } else if (tianHits.total > heHits.total) {
-        top1Name = PRIORITY_MENTOR_NAMES.tian;
-        top2Name = PRIORITY_MENTOR_NAMES.he;
-      }
-    }
-  }
-
-  const top1HitCount = top1Name === PRIORITY_MENTOR_NAMES.tian ? tianHits.total : heHits.total;
-  const top2HitCount = top2Name === PRIORITY_MENTOR_NAMES.tian ? tianHits.total : heHits.total;
   return {
-    top1Name,
-    top2Name,
-    top1HitCount,
-    top2HitCount,
+    top1Name: PRIORITY_MENTOR_NAMES.tian,
+    top2Name: PRIORITY_MENTOR_NAMES.he,
+    top1HitCount: tianHits.total,
+    top2HitCount: heHits.total,
     reasonType,
     primaryDirection: DIRECTION_ROUTE_LABELS.product,
     priorityMentorBoost: true,
     tianStrength,
     heStrength,
-    reasonText: buildPriorityReasonText(reasonType, tianHits, heHits)
+    reasonText: buildProductFixedReasonText(tianHits, heHits)
   };
 }
 
@@ -774,20 +726,17 @@ function findMatchedKeywords(text, keywords) {
   return keywords.filter((keyword) => normalized.includes(keyword.toLowerCase()));
 }
 
-function buildPriorityReasonText(reasonType, tianHits, heHits) {
+function buildProductFixedReasonText(tianHits, heHits) {
   const tianMatched = tianHits.matched.slice(0, 4).join("、");
   const heMatched = heHits.matched.slice(0, 4).join("、");
 
-  if (reasonType === "interaction") {
-    return `你更偏向交互与数字体验方向（命中：${tianMatched || "交互/数字体验"}），建议优先联系田飞老师，再看其余导师。`;
+  if (tianHits.total === 0 && heHits.total === 0) {
+    return "你的目标方向是产品设计，当前未明显命中细分关键词，建议先联系田飞老师（Top1），再联系何铭锋老师（Top2）。";
   }
-  if (reasonType === "industrial") {
-    return `你更偏向工业与产品落地方向（命中：${heMatched || "工业/产品落地"}），建议优先联系何铭锋老师，再看其余导师。`;
+  if (tianHits.total >= heHits.total) {
+    return `你的目标方向是产品设计，且更偏交互与数字体验（命中：${tianMatched || "交互/数字体验"}），建议先联系田飞老师（Top1），再联系何铭锋老师（Top2）。`;
   }
-  if (reasonType === "mixed") {
-    return `你的输入同时命中交互与产品两类倾向（交互：${tianMatched || "已命中"}；产品：${heMatched || "已命中"}），建议先双线沟通重点导师，再细化选择。`;
-  }
-  return "当前输入未明显命中交互/工业关键词，仍建议优先查看田飞与何铭锋两位重点导师，再结合官网信息精筛。";
+  return `你的目标方向是产品设计，且更偏工业与产品落地（命中：${heMatched || "工业/产品落地"}），仍建议按产品方向优先顺序先联系田飞老师（Top1），再联系何铭锋老师（Top2）。`;
 }
 
 function reorderMentorsByPriority(list, decision) {

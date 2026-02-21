@@ -117,7 +117,6 @@ const toastState = {
 const els = {
   launchScreen: document.getElementById("launchScreen"),
   startAppBtn: document.getElementById("startAppBtn"),
-  startAppBtn2: document.getElementById("startAppBtn2"),
   appMain: document.getElementById("appMain"),
   formPage: document.getElementById("formPage"),
   resultPage: document.getElementById("resultPage"),
@@ -170,9 +169,6 @@ async function init() {
 function bindEvents() {
   if (els.startAppBtn) {
     els.startAppBtn.addEventListener("click", enterApp);
-  }
-  if (els.startAppBtn2) {
-    els.startAppBtn2.addEventListener("click", enterApp);
   }
   if (els.backToFormBtn) {
     els.backToFormBtn.addEventListener("click", showFormPage);

@@ -234,29 +234,71 @@ body.in-app .app-shell {
 .launch-hero-card {
   min-height: 0;
   align-content: start;
-  gap: 14px;
-}
-
-.hero-top {
-  display: grid;
-  gap: 4px;
-  max-width: 60ch;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line);
+  gap: 15px;
+  padding-top: calc(var(--shell-pad) + 24px);
 }
 
 .hero-title {
-  margin: 2px 0 4px;
+  margin: 0;
+  max-width: none;
   font-family: var(--display-font);
-  font-size: clamp(1.56rem, 3.2vw, 2.28rem);
-  line-height: 1.1;
+  font-size: clamp(1.86rem, 4.1vw, 2.86rem);
+  line-height: 1.12;
   font-weight: 800;
 }
 
-.hero-brief {
+.hero-title span {
+  display: block;
+  margin-top: 6px;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: nowrap;
+}
+
+.hero-corner-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
   margin: 0;
+  width: fit-content;
+  max-width: min(70vw, 320px);
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 113, 227, 0.22);
+  background: rgba(0, 113, 227, 0.1);
+  color: var(--accent);
+  font-family: var(--body-font);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.hero-support {
+  margin: 0;
+  max-width: 58ch;
   color: var(--ink-soft);
-  font-size: 0.95rem;
+  font-size: 1.07rem;
+  line-height: 1.62;
+}
+
+.hero-meta {
+  margin: 6px 0 0;
+  max-width: 58ch;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.52;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
+}
+
+.hero-meta a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+
+.launch-meta-note {
+  margin-top: 12px;
 }
 
 .launch-card::after {
@@ -268,42 +310,6 @@ body.in-app .app-shell {
   top: -160px;
   border-radius: 999px;
   background: radial-gradient(circle at 30% 32%, rgba(0, 113, 227, 0.14), rgba(0, 113, 227, 0));
-}
-
-.launch-badge {
-  margin: 0;
-  width: fit-content;
-  padding: 5px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 113, 227, 0.18);
-  background: rgba(0, 113, 227, 0.12);
-  color: var(--accent);
-  font-family: var(--body-font);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-}
-
-.launch-card h2 {
-  margin: 0;
-  max-width: 24ch;
-  font-family: var(--display-font);
-  font-size: clamp(1.35rem, 2.9vw, 2.05rem);
-  line-height: 1.18;
-  font-weight: 800;
-}
-
-.launch-sub {
-  margin: 0;
-  max-width: 56ch;
-  color: var(--ink-soft);
-  font-size: 1.02rem;
-}
-
-.launch-note {
-  margin: -4px 0 0;
-  color: var(--ink-soft);
-  font-size: 0.88rem;
 }
 
 .launch-trust {
@@ -323,30 +329,15 @@ body.in-app .app-shell {
   font-family: var(--display-font);
   font-size: clamp(1.16rem, 2.3vw, 1.52rem);
   font-weight: 800;
-}
-
-.launch-trust .cover-actions {
-  margin-top: 4px;
-}
-
-.senior-story-strip {
-  position: relative;
-  z-index: 1;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: var(--shadow-tight);
-  backdrop-filter: saturate(180%) blur(16px);
-}
-
-.senior-story-strip::before {
-  content: none;
+  padding-right: 160px;
 }
 
 .story-tag {
+  position: absolute;
+  top: 20px;
+  right: 18px;
+  z-index: 2;
   margin: 0;
-  width: fit-content;
   padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid rgba(0, 0, 0, 0.1);
@@ -362,6 +353,7 @@ body.in-app .app-shell {
   margin: 8px 0 4px;
   color: var(--ink);
   font-weight: 700;
+  line-height: 1.45;
 }
 
 .story-long {
@@ -411,7 +403,8 @@ body.in-app .app-shell {
 .cover-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 6px;
 }
 
 button,
@@ -1722,8 +1715,32 @@ select:focus {
   }
 
   .hero-title {
-    font-size: clamp(1.32rem, 6.9vw, 1.78rem);
+    font-size: clamp(1.22rem, 5.8vw, 1.56rem);
     line-height: 1.16;
+  }
+
+  .hero-title span {
+    margin-top: 4px;
+    font-size: inherit;
+    white-space: nowrap;
+  }
+
+  .hero-corner-badge {
+    top: 12px;
+    right: 12px;
+    max-width: 70vw;
+    font-size: 0.72rem;
+    padding: 5px 10px;
+  }
+
+  .launch-trust h3 {
+    padding-right: 140px;
+  }
+
+  .story-tag {
+    top: 16px;
+    right: 12px;
+    font-size: 0.72rem;
   }
 
   .panel {
@@ -1745,20 +1762,19 @@ select:focus {
     align-items: stretch;
   }
 
-  .launch-card h2 {
-    max-width: none;
-    font-size: clamp(1.28rem, 7vw, 1.66rem);
-    white-space: normal;
-    line-height: 1.22;
-    overflow-wrap: anywhere;
+  .hero-support {
+    font-size: 1rem;
+    line-height: 1.5;
   }
 
-  .launch-sub {
-    font-size: 0.94rem;
+  .hero-meta {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    line-height: 1.48;
   }
 
-  .launch-note {
-    font-size: 0.82rem;
+  .launch-meta-note {
+    margin-top: 14px;
   }
 
   .result-head {
